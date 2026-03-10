@@ -1,6 +1,12 @@
 name: Commitlint
 
 on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+      - main
+      - master
   pull_request:
     types: [opened, synchronize, reopened, edited]
 
@@ -23,5 +29,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Determine commit range
+        id: range
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "from=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "to=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            echo "from=HEAD~1" >> "$GITHUB_OUTPUT"
+            echo "to=HEAD" >> "$GITHUB_OUTPUT"
+          else
+            echo "from=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
+            echo "to=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Lint commit messages
-        run: npx commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.event.pull_request.head.sha }}" --verbose
+        run: npx commitlint --from "${{ steps.range.outputs.from }}" --to "${{ steps.range.outputs.to }}" --verbose
