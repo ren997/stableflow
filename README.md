@@ -30,3 +30,7 @@ chore: set up commitlint and husky
 GitHub Actions validates commit messages for pull requests in:
 
 `/.github/workflows/commitlint.yml`
+
+### PR validation test
+
+This note exists to trigger a pull request check on the `test` branch.
