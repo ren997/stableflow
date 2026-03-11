@@ -1,5 +1,7 @@
 package com.stableflow.auth.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.stableflow.auth.dto.LoginRequestDto;
 import com.stableflow.auth.service.AuthService;
 import com.stableflow.auth.vo.CurrentUserVo;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Auth", description = "Authentication APIs / 认证接口")
 public class AuthController {
 
     private final AuthService authService;
@@ -23,11 +26,13 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @Operation(summary = "Merchant login / 商家登录")
     public ApiResponse<LoginResponseVo> login(@Valid @RequestBody LoginRequestDto request) {
         return ApiResponse.success(authService.login(request));
     }
 
     @GetMapping("/me")
+    @Operation(summary = "Get current merchant info / 获取当前商家信息")
     public ApiResponse<CurrentUserVo> me() {
         return ApiResponse.success(authService.me());
     }

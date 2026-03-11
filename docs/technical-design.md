@@ -59,6 +59,7 @@ MVP 需要优先支撑以下能力：
 - Spring Validation
 - Spring Security
 - Spring Scheduling
+- SpringDoc OpenAPI
 - MyBatis-Plus
 - PostgreSQL
 - Redis
@@ -69,6 +70,7 @@ MVP 需要优先支撑以下能力：
 - 你已有其他项目在使用 JDK 21，可降低上下文切换成本
 - Spring Boot 3.x 对 JDK 21 支持成熟
 - Java + Spring Boot 适合账单、状态机、定时任务、审计日志等强业务系统
+- SpringDoc OpenAPI 可快速生成 Swagger UI，适合前后端联调、接口调试与 Demo 展示
 - MyBatis-Plus 开发效率高，比 JPA 更适合当前明确的数据表与状态驱动场景
 - PostgreSQL 在事务、JSON 字段、索引能力上更适合这类后台系统
 - Redis 可同时承担缓存、幂等键、分布式锁、短期状态存储
@@ -138,6 +140,20 @@ Redis 用途：
 - Vite + React 更简单，启动快、心智负担低，更适合黑客松周期
 - Ant Design 很适合账单列表、筛选、表单、统计面板等中后台页面
 - TanStack Query 适合处理后端 API 请求、缓存、刷新和状态同步
+
+### 3.5 API 文档与调试建议
+
+推荐方案：
+
+- 使用 SpringDoc OpenAPI
+- 启用 Swagger UI
+- 支持 Bearer JWT 鉴权调试
+
+选择理由：
+
+- 可自动生成 OpenAPI 文档，减少手工维护接口文档成本
+- 适合当前 MVP 阶段的接口联调、Demo 演示与快速验收
+- 可直接在 Swagger UI 中调试受保护接口，提升开发效率
 
 ### 3.6 Solana 接入建议
 

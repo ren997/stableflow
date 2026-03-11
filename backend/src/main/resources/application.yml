@@ -29,6 +29,14 @@ mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
+
 stableflow:
   payment:
     order-association-mode: FIXED_ADDRESS_REFERENCE

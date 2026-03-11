@@ -1,5 +1,7 @@
 package com.stableflow.merchant.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.stableflow.merchant.dto.MerchantPaymentConfigRequestDto;
 import com.stableflow.merchant.service.MerchantPaymentConfigService;
 import com.stableflow.merchant.vo.MerchantPaymentConfigVo;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/merchant/payment-config")
+@Tag(name = "Merchant", description = "Merchant payment configuration APIs / 商家收款配置接口")
 public class MerchantPaymentConfigController {
 
     private final MerchantPaymentConfigService merchantPaymentConfigService;
@@ -22,11 +25,13 @@ public class MerchantPaymentConfigController {
     }
 
     @PostMapping
+    @Operation(summary = "Create or update merchant payment config / 创建或更新商家收款配置")
     public ApiResponse<MerchantPaymentConfigVo> saveOrUpdate(@Valid @RequestBody MerchantPaymentConfigRequestDto request) {
         return ApiResponse.success(merchantPaymentConfigService.saveOrUpdate(request));
     }
 
     @GetMapping
+    @Operation(summary = "Get current merchant payment config / 获取当前商家收款配置")
     public ApiResponse<MerchantPaymentConfigVo> getCurrentConfig() {
         return ApiResponse.success(merchantPaymentConfigService.getCurrentConfig());
     }
