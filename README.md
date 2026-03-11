@@ -2,6 +2,12 @@
 
 Stablecoin payment workflow infrastructure, first built on Solana.
 
+## Repository layout
+
+- `docs/`: product, technical, and implementation documents
+- `backend/`: Spring Boot backend
+- `frontend/`: React frontend
+
 ## Overview
 StableFlow is a workflow-driven stablecoin billing, payment, and reconciliation system for global merchants.
 
@@ -22,7 +28,7 @@ After installation, Husky will register the `commit-msg` hook automatically.
 ```text
 feat: add invoice creation flow
 docs: refine stableflow requirements
-chore: set up commitlint and husky
+chore: set up backend and frontend skeleton
 ```
 
 ### CI enforcement

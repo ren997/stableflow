@@ -27,11 +27,12 @@
 
 MVP 需要优先支撑以下能力：
 
+- 商家配置固定 Solana USDC 收款地址
 - 商家创建 Invoice
-- 系统生成唯一收款地址与 Solana 原生支付请求
+- 系统生成唯一 reference 与 Solana 原生支付请求
 - 客户完成 Solana USDC 支付
 - 系统监听链上交易、获取交易详情并完成验证
-- 系统完成核销、异常处理、通知和基础对账
+- 系统完成核销、异常处理、Payment Proof 和基础对账
 - Agent 基于已验证的支付事实提供辅助操作
 
 ### 2.2 设计原则
@@ -39,8 +40,9 @@ MVP 需要优先支撑以下能力：
 - 业务优先：核心是 billing -> payment -> verification -> reconciliation 工作流
 - 单体优先：当前阶段优先降低复杂度，先把闭环跑通
 - 链上事实驱动：支付结果不能只依赖本地状态，必须基于链上交易验证
-- 幂等优先：支付扫描、状态更新、通知发送必须幂等
-- 异步解耦：监听、验证、核销、通知、Agent 总结彼此解耦
+- reference 优先：订单归因主策略是固定收款地址 + reference
+- 幂等优先：支付扫描、状态更新、Payment Proof 生成必须幂等
+- 异步解耦：监听、验证、核销、对账彼此解耦
 - 可演进：后续可以平滑演进到多链、多币种、Webhook 与开放 API
 
 ---
@@ -87,18 +89,6 @@ MVP 需要优先支撑以下能力：
 - 处理 Webhook 分发
 - 处理 I/O 密集型异步任务
 
-不建议过度依赖的场景：
-
-- 简单 CRUD 接口
-- 仍需严格控制并发边界的复杂事务逻辑
-- 尚未验证线程模型收益的代码路径
-
-推荐策略：
-
-- Web 层保持 Spring Boot 默认实践
-- 在外部 I/O 密集模块中使用虚拟线程执行器
-- 保持线程模型清晰，不把“用了虚拟线程”当成架构卖点
-
 ### 3.3 异步与消息中间件建议
 
 当前阶段明确建议：
@@ -110,14 +100,8 @@ MVP 需要优先支撑以下能力：
 推荐理由：
 
 - 当前是模块化单体，不是多服务事件平台，Kafka 的运维和使用复杂度过高
-- 当前异步任务主要是扫描、验证、通知、Agent 总结，RabbitMQ 更适合工作队列、延迟重试和低成本接入
+- 当前异步任务主要是扫描、验证、对账，RabbitMQ 更适合工作队列、延迟重试和低成本接入
 - Kafka 更适合高吞吐、流式分析、多消费者事件平台，不是当前 MVP 的核心痛点
-
-明确建议：
-
-- 第一阶段：不强依赖消息中间件
-- 第二阶段：若通知、Agent、Webhook 等异步任务明显增多，再引入 RabbitMQ
-- Kafka 只在未来多服务拆分、海量交易事件流转时再考虑
 
 ### 3.4 数据库与缓存
 
@@ -135,7 +119,7 @@ Redis 用途：
 - 热点查询缓存
 - 支付扫描任务锁
 - 短期支付状态缓存
-- 限流与防重复提交
+- reference 去重与任务锁控制
 
 ### 3.5 前端选型建议
 
@@ -150,16 +134,10 @@ Redis 用途：
 
 选择理由：
 
-- 你的当前产品主要是中后台和支付页，不是内容站，没必要优先上 Next.js
-- Vite + React 对单独前端项目更简单，启动快、心智负担低，更适合黑客松周期
+- 当前产品主要是中后台和支付页，不是内容站，没必要优先上 Next.js
+- Vite + React 更简单，启动快、心智负担低，更适合黑客松周期
 - Ant Design 很适合账单列表、筛选、表单、统计面板等中后台页面
 - TanStack Query 适合处理后端 API 请求、缓存、刷新和状态同步
-
-补充建议：
-
-- 支付页支持二维码 + 支付链接
-- 如需要钱包连接，可补充 `@solana/wallet-adapter-react`
-- 钱包优先兼容：Phantom、Solflare、Backpack
 
 ### 3.6 Solana 接入建议
 
@@ -169,12 +147,14 @@ Redis 用途：
 - 后端封装独立 `SolanaClient`
 - 优先采用轮询扫描 + 交易详情查询的方式完成 MVP
 - 支付请求采用 Solana 原生支付链接 / 二维码
+- 订单归因优先使用 `recipient + reference`
 
 原因：
 
 - 托管 RPC 更稳定，适合黑客松 demo 和后续线上演示
 - 轮询方案更容易控制、排查和重试
-- 当前核心是支付闭环，不需要为了“实时感”过早上复杂订阅系统
+- 固定地址 + reference 更适合 Solana Native 支付体验
+- 相比一单一地址，能显著降低收款地址和私钥管理复杂度
 
 ---
 
@@ -195,16 +175,20 @@ Redis 用途：
 推荐按包或模块拆分：
 
 - `auth`：登录、商家身份认证、权限校验
-- `merchant`：商家信息与商家设置
+- `merchant`：商家信息、固定收款地址配置
 - `invoice`：账单创建、编辑、状态管理
-- `payment`：支付地址、支付请求、支付状态查询
+- `payment`：支付请求、支付状态查询、支付页信息展示
 - `blockchain`：Solana RPC 封装、交易扫描、交易解析
 - `verification`：支付验证、订单归因、状态判定
-- `reconciliation`：核销处理、支付证明、异常处理
-- `notification`：邮件、站内消息、后续 Webhook
+- `reconciliation`：核销处理、Payment Proof、异常处理
 - `dashboard`：统计查询、对账汇总、异常筛选
 - `agent`：自然语言开单、异常解释、对账总结
 - `common`：异常、工具类、基础枚举、审计字段、响应模型
+
+说明：
+
+- `notification` 不作为 P0 主模块，可在后续阶段引入
+- P0 优先完成 invoice、payment、blockchain、verification、reconciliation 五个核心模块
 
 ### 4.3 逻辑分层
 
@@ -213,8 +197,8 @@ Redis 用途：
 - Controller：对外提供 REST API
 - Application Service：编排业务流程
 - Domain Service：封装核心业务规则与状态流转
-- Infrastructure：数据库、Redis、Solana RPC、通知、消息中间件
-- Scheduler / Worker：异步扫描、重试、提醒、汇总任务
+- Infrastructure：数据库、Redis、Solana RPC
+- Scheduler / Worker：异步扫描、验证、对账任务
 
 ---
 
@@ -224,30 +208,30 @@ Redis 用途：
 
 主链路如下：
 
-1. 商家创建 Invoice
-2. 系统生成唯一收款地址
-3. 系统生成支付链接 / 支付二维码
+1. 商家配置固定收款地址
+2. 商家创建 Invoice
+3. 系统为该 Invoice 生成唯一 reference、支付链接和支付二维码
 4. 客户使用 Solana 钱包支付 USDC
-5. 后端扫描目标地址相关交易
+5. 后端按商家固定收款地址扫描候选交易，并结合 reference 定位目标交易
 6. 后端获取交易详情并解析 token transfer
-7. 后端验证地址、币种、金额、有效期、幂等性
+7. 后端验证收款地址、reference、币种、金额、有效期、幂等性
 8. 后端更新 Invoice 状态并写入核销记录
-9. 后端生成支付结果说明 / Payment Proof
-10. 后端触发通知与对账更新
+9. 后端生成 Payment Proof
+10. 后端更新 Dashboard 聚合结果
 11. Agent 基于已验证结果提供解释或总结
 
 ### 5.2 为什么区分监听、验证、核销
 
 这三步必须明确拆开：
 
-- 监听：发现疑似支付
+- 监听：发现候选交易
 - 验证：判断该交易是否满足该 Invoice 的支付条件
 - 核销：基于验证结果更新业务状态并沉淀结果
 
 这样做的原因：
 
 - 避免“地址收到了钱就直接判成功”
-- 支持少付、多付、过期到账、错误币种等异常分支
+- 支持少付、多付、过期到账、错误币种、reference 缺失等异常分支
 - 便于做幂等、重试、异常回放
 - 更符合 Solana 黑客松对链上验证闭环的期待
 
@@ -257,47 +241,39 @@ Redis 用途：
 
 ### 6.1 支付请求设计
 
-每张 Invoice 在创建后生成两类支付信息：
+每张 Invoice 在创建后生成一份支付请求，支付请求包含：
 
-- 唯一收款地址
-- Solana 原生支付请求
-
-支付请求至少包含：
-
-- recipient：收款地址
-- amount：金额
-- spl-token：USDC mint 地址
-- label：商家名称
-- message：订单摘要
-- reference：可选的订单辅助标识
+- 商家固定收款地址
+- 账单金额
+- USDC mint
+- unique reference
+- label
+- message
+- payment link
 
 说明：
 
-- MVP 中，订单归因仍然以“一单一地址”为主
-- `reference` 作为增强信息，不作为唯一归因依据
-- 支付页同时展示地址、金额、二维码和支付链接
+- 商家固定收款地址是资产入口
+- reference 是订单归因主锚点
+- 支付页同时展示支付链接、二维码和支付摘要
 
 ### 6.2 支付监听方案
 
 MVP 推荐方案：
 
-- 使用定时任务按批扫描待支付 Invoice 的收款地址
-- 通过 RPC 查询地址相关签名列表
+- 使用定时任务按批扫描商家固定收款地址相关交易
+- 通过 RPC 查询候选交易签名列表
 - 对新增签名拉取交易详情
+- 解析转账指令中的收款地址、mint、amount、reference
 - 将交易写入 `payment_transaction` 并进入验证队列
-
-推荐参数：
-
-- 扫描周期：10 到 20 秒
-- 每批扫描待支付账单数：100 到 500，按环境调整
-- 地址扫描范围：仅 `PENDING`、`PARTIALLY_PAID`、`OVERPAID`、临近过期账单
 
 ### 6.3 链上验证规则
 
 对每笔候选交易，需要完成以下验证：
 
 - 交易状态是否成功
-- 接收地址是否为该 Invoice 的收款地址
+- 接收地址是否为该商家的固定收款地址
+- 交易 reference 是否匹配该 Invoice
 - 转账资产是否为指定 USDC mint
 - 金额是否等于、小于或大于应付金额
 - blockTime 是否在 Invoice 有效期内
@@ -313,17 +289,20 @@ MVP 推荐方案：
 - `FAILED_RECONCILIATION`
 - `UNMATCHED_PAYMENT`
 - `WRONG_CURRENCY`
+- `MISSING_REFERENCE`
+- `INVALID_REFERENCE`
 
 ### 6.4 Payment Proof 设计
 
 MVP 不上链上智能合约，但需要提供“可验证支付结果”。
 
-Payment Proof 可作为系统内的支付凭证视图，至少包含：
+Payment Proof 至少包含：
 
 - invoiceId
 - txHash
 - payerAddress
-- receiverAddress
+- recipientAddress
+- reference
 - mintAddress
 - amount
 - paidAt
@@ -359,6 +338,8 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 - `WRONG_CURRENCY`
 - `DUPLICATE_PAYMENT`
 - `UNMATCHED_PAYMENT`
+- `MISSING_REFERENCE`
+- `INVALID_REFERENCE`
 - `PAYMENT_DELAYED`
 
 ### 7.3 状态流转规则
@@ -392,11 +373,25 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 - `created_at`
 - `updated_at`
 
-### 8.2 invoice
+### 8.2 merchant_payment_config
 
 核心字段：
 
 - `id`
+- `merchant_id`
+- `wallet_address`
+- `mint_address`
+- `chain`
+- `active_flag`
+- `created_at`
+- `updated_at`
+
+### 8.3 invoice
+
+核心字段：
+
+- `id`
+- `public_id`
 - `merchant_id`
 - `invoice_no`
 - `customer_name`
@@ -405,34 +400,38 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 - `chain`
 - `description`
 - `status`
+- `exception_tags`
 - `expire_at`
 - `paid_at`
 - `created_at`
 - `updated_at`
 
-### 8.3 invoice_payment_account
+### 8.4 invoice_payment_request
 
 核心字段：
 
 - `id`
 - `invoice_id`
-- `payment_address`
+- `recipient_address`
+- `reference_key`
 - `mint_address`
 - `expected_amount`
-- `expire_at`
 - `payment_link`
-- `active_flag`
+- `label`
+- `message`
+- `expire_at`
 - `created_at`
 
-### 8.4 payment_transaction
+### 8.5 payment_transaction
 
 核心字段：
 
 - `id`
 - `invoice_id`
 - `tx_hash`
+- `reference_key`
 - `payer_address`
-- `receiver_address`
+- `recipient_address`
 - `amount`
 - `currency`
 - `mint_address`
@@ -442,13 +441,7 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 - `raw_payload`
 - `created_at`
 
-约束建议：
-
-- `tx_hash` 唯一索引
-- `invoice_id + tx_hash` 联合索引
-- `receiver_address + block_time` 普通索引
-
-### 8.5 reconciliation_record
+### 8.6 reconciliation_record
 
 核心字段：
 
@@ -461,7 +454,7 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 - `processed_at`
 - `created_at`
 
-### 8.6 payment_proof
+### 8.7 payment_proof
 
 核心字段：
 
@@ -470,18 +463,6 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 - `tx_hash`
 - `proof_type`
 - `proof_payload`
-- `created_at`
-
-### 8.7 notification_record
-
-核心字段：
-
-- `id`
-- `invoice_id`
-- `notification_type`
-- `receiver`
-- `send_status`
-- `retry_count`
 - `created_at`
 
 ### 8.8 outbox_event
@@ -495,13 +476,10 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 - `payload`
 - `status`
 - `retry_count`
+- `last_error`
 - `next_retry_at`
 - `created_at`
-
-用途：
-
-- 解耦通知、Agent 总结、后续 Webhook
-- 在不引入 Kafka 的情况下支撑可靠异步事件处理
+- `updated_at`
 
 ---
 
@@ -513,55 +491,37 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 - `POST /api/auth/logout`
 - `GET /api/auth/me`
 
-### 9.2 Invoice 接口
+### 9.2 商家配置接口
 
-- `POST /api/invoices`：创建账单
-- `PUT /api/invoices/{id}`：编辑账单
-- `GET /api/invoices/{id}`：查询详情
-- `GET /api/invoices`：分页查询
-- `POST /api/invoices/{id}/activate`：草稿转待支付
-- `POST /api/invoices/{id}/reconcile`：手动触发核销
+- `POST /api/merchant/payment-config`
+- `GET /api/merchant/payment-config`
 
-### 9.3 支付接口
+### 9.3 Invoice 接口
 
-- `GET /api/invoices/{id}/payment-info`：支付地址、金额、二维码、支付链接
-- `GET /api/invoices/{id}/payment-status`：支付状态
-- `GET /api/invoices/{id}/payment-proof`：支付凭证
+- `POST /api/invoices`
+- `PUT /api/invoices/{id}`
+- `GET /api/invoices/{id}`
+- `GET /api/invoices`
+- `POST /api/invoices/{id}/activate`
+- `POST /api/invoices/{id}/reconcile`
 
-### 9.4 Dashboard 接口
+### 9.4 支付接口
+
+- `GET /api/invoices/{id}/payment-info`
+- `GET /api/invoices/{id}/payment-status`
+- `GET /api/invoices/{id}/payment-proof`
+
+### 9.5 Dashboard 接口
 
 - `GET /api/dashboard/summary`
 - `GET /api/dashboard/invoices/status`
 - `GET /api/dashboard/invoices/exceptions`
-- `GET /api/dashboard/reconciliation-summary`
 
-### 9.5 Agent 接口
+### 9.6 Agent 接口
 
 - `POST /api/agent/create-invoice`
-- `POST /api/agent/reminder-message`
 - `POST /api/agent/exception-explain`
 - `POST /api/agent/reconciliation-summary`
-
-### 9.6 通用接口约定
-
-推荐统一响应结构：
-
-```json
-{
-  "code": 0,
-  "message": "success",
-  "data": {}
-}
-```
-
-错误码建议按分类设计：
-
-- `AUTH_*`
-- `INVOICE_*`
-- `PAYMENT_*`
-- `RECONCILIATION_*`
-- `AGENT_*`
-- `SYSTEM_*`
 
 ---
 
@@ -570,11 +530,9 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 ### 10.1 必备定时任务
 
 - `InvoiceExpireJob`：扫描到期账单并更新状态
-- `PaymentScanJob`：扫描待支付账单相关交易
+- `PaymentScanJob`：扫描固定收款地址相关交易
 - `PaymentVerifyJob`：处理待验证交易
-- `NotificationDispatchJob`：发送待发送通知
 - `OutboxDispatchJob`：分发 outbox 事件
-- `ReminderJob`：生成逾期提醒任务
 
 ### 10.2 推荐执行方式
 
@@ -589,13 +547,6 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 
 - 需要更好的削峰、重试和异步隔离时，引入 RabbitMQ
 
-### 10.3 为什么不先上 Kafka
-
-- 当前吞吐量不大
-- 当前只有单体应用，Kafka 价值不明显
-- Kafka 对本地开发、测试、部署、排障都更重
-- 黑客松 MVP 重点是业务闭环，不是事件平台建设
-
 ---
 
 ## 11. 安全与权限设计
@@ -605,17 +556,12 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 推荐：
 
 - Spring Security + JWT
-
-说明：
-
-- 商家后台使用 JWT 访问 API
-- 可先做单商家 demo 模式，再补完整注册登录
-- 黑客松 demo 可以预置测试账号
+- 密码哈希采用 BCrypt
 
 ### 11.2 权限边界
 
-- 商家只能查看自己的 Invoice、交易、通知和统计
-- 公共支付页无需登录，但只能查看单张账单的公开支付信息
+- 商家只能查看自己的 Invoice、交易、Payment Proof 和统计
+- 公共支付页使用 `public_id` 而不是数据库自增 id
 - Agent 接口默认只能访问当前商家的数据
 
 ### 11.3 配置安全
@@ -625,7 +571,6 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 - 数据库连接串
 - Redis 密码
 - RPC API Key
-- 邮件服务密钥
 - LLM API Key
 - JWT Secret
 
@@ -647,7 +592,6 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 - 交易验证日志
 - 核销日志
 - 异常单日志
-- 通知发送日志
 - Agent 调用日志
 
 建议日志字段：
@@ -655,8 +599,8 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 - `traceId`
 - `merchantId`
 - `invoiceId`
+- `reference`
 - `txHash`
-- `eventType`
 - `status`
 
 ### 12.2 监控指标
@@ -668,25 +612,7 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 - 异常账单数
 - 支付扫描耗时
 - 支付验证成功率
-- 通知成功率
-- Agent 请求耗时
-
-### 12.3 部署建议
-
-开发和演示环境推荐：
-
-- 前端：Vercel 或静态托管
-- 后端：Docker 部署到云主机
-- PostgreSQL：托管或单机容器
-- Redis：托管或单机容器
-- RabbitMQ：暂不必备
-
-本地开发推荐 Docker Compose：
-
-- app
-- postgres
-- redis
-- rabbitmq（可选）
+- Payment Proof 生成成功率
 
 ---
 
@@ -698,9 +624,9 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 
 - Invoice 状态流转
 - 支付验证规则
+- reference 归因规则
 - 异常标签判定
 - 幂等处理逻辑
-- Agent 输入解析
 
 ### 13.2 集成测试
 
@@ -709,19 +635,8 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 - 创建账单 -> 生成支付信息
 - 扫描交易 -> 验证 -> 核销
 - 少付、多付、过期到账
+- 缺少 reference / reference 不匹配
 - 重复扫描同一 txHash
-- 通知发送与失败重试
-
-### 13.3 验收测试
-
-必须覆盖：
-
-- 正常支付闭环
-- 少付闭环
-- 多付闭环
-- 过期到账闭环
-- Agent 自然语言开单
-- Agent 异常解释
 
 ---
 
@@ -729,20 +644,19 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 
 ### 14.1 P0
 
-- Merchant 基础认证
-- Invoice 创建与列表
-- 唯一收款地址生成
+- 商家基础认证
+- 商家固定收款地址配置
+- Invoice 创建、列表、详情
 - 支付链接 / 二维码生成
 - PaymentScanJob
 - 交易详情解析
-- 支付验证与核销
-- 异常单展示
+- reference 归因与支付验证
+- Reconciliation + Payment Proof
 - Dashboard 基础汇总
 
 ### 14.2 P1
 
-- Payment Proof 详情页
-- 邮件通知
+- 异常账单页
 - Agent 自然语言开单
 - Agent 异常解释
 - Agent 对账总结
@@ -754,6 +668,7 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 - 多钱包更深兼容
 - 更复杂权限体系
 - 自动归集
+- 通知体系增强
 
 ---
 
@@ -767,6 +682,7 @@ Payment Proof 可作为系统内的支付凭证视图，至少包含：
 - 异步优先使用 Scheduler + Outbox，不急着上 Kafka
 - 如异步复杂度提高，再引入 RabbitMQ
 - 产品主线坚持 billing -> payment -> verification -> reconciliation
+- 支付策略采用“固定地址 + reference”
 - Agent 作为增强层，不与支付判定主链路耦合
 
 一句话总结：

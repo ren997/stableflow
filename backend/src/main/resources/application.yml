@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: stableflow-backend
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/stableflow}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jackson:
+    time-zone: UTC
+
+server:
+  port: ${SERVER_PORT:8080}
+
+logging:
+  level:
+    root: INFO
+    com.stableflow: INFO
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+stableflow:
+  payment:
+    order-association-mode: FIXED_ADDRESS_REFERENCE
+    public-base-url: ${PUBLIC_BASE_URL:http://localhost:5173}
+  security:
+    jwt-secret: ${JWT_SECRET:change-me-in-env}
+  solana:
+    rpc-url: ${SOLANA_RPC_URL:https://api.devnet.solana.com}
+    usdc-mint-address: ${SOLANA_USDC_MINT:replace-me}
+  agent:
+    api-key: ${AGENT_API_KEY:replace-me}
