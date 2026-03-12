@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5432/stableflow
+    username: postgres
+    password: change-me
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password:
+
+stableflow:
+  security:
+    jwt-secret: change-me
+  solana:
+    rpc-url: https://api.devnet.solana.com
+    usdc-mint-address: replace-me
+  payment:
+    public-base-url: http://localhost:5173
+  agent:
+    api-key: replace-me
