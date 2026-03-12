@@ -15,8 +15,9 @@
 
 ## Commit Messages
 
-- Use the format `<type>(<module>): <中文主题> / <English subject>`.
+- Use the format `<type>(<module>): <主题>`.
 - Keep the `type` compatible with Conventional Commits, such as `feat`, `fix`, `refactor`, `docs`, `test`, or `chore`.
 - Prefer a short module scope such as `blockchain`, `invoice`, `merchant`, `auth`, `frontend`, `docs`, or `repo`.
-- The subject after `:` must be bilingual, with Chinese first and English second.
-- Example: `refactor(blockchain): 重构 Solana RPC 交易解析 / Refactor Solana RPC transaction parsing`
+- Prefer Chinese for the subject; English is optional when it improves clarity for reviewers.
+- Example: `refactor(blockchain): 重构 Solana RPC 交易解析`
+- Optional bilingual example: `refactor(blockchain): 重构 Solana RPC 交易解析 / Refactor Solana RPC transaction parsing`

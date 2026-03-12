@@ -26,14 +26,16 @@ After installation, Husky will register the `commit-msg` hook automatically.
 ### Commit message examples
 
 ```text
-feat(invoice): 新增账单创建流程 / Add invoice creation flow
-docs(repo): 完善 StableFlow 需求文档 / Refine StableFlow requirements
-refactor(blockchain): 重构 Solana RPC 交易解析 / Refactor Solana RPC transaction parsing
+feat(invoice): 新增账单创建流程
+docs(repo): 完善 StableFlow 需求文档
+refactor(blockchain): 重构 Solana RPC 交易解析
 ```
 
 ### Recommended format
 
-Use the format `<type>(<module>): <中文主题> / <English subject>`.
+Use the format `<type>(<module>): <subject>`.
+
+Chinese is preferred for day-to-day development. English is optional when it helps external reviewers.
 
 ### CI enforcement
 
