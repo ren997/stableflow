@@ -48,5 +48,7 @@ stableflow:
   solana:
     rpc-url: ${SOLANA_RPC_URL:https://api.devnet.solana.com}
     usdc-mint-address: ${SOLANA_USDC_MINT:replace-me}
+    connect-timeout: ${SOLANA_CONNECT_TIMEOUT:3s}
+    read-timeout: ${SOLANA_READ_TIMEOUT:10s}
   agent:
     api-key: ${AGENT_API_KEY:replace-me}

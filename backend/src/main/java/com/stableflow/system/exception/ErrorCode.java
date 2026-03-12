@@ -8,6 +8,10 @@ public enum ErrorCode {
     INVOICE_NOT_FOUND(40403, "Invoice not found"),
     INVALID_CREDENTIALS(40001, "Invalid credentials"),
     INVALID_REQUEST(40002, "Invalid request"),
+    BLOCKCHAIN_RPC_TIMEOUT(50010, "Blockchain RPC timeout"),
+    BLOCKCHAIN_RPC_HTTP_ERROR(50011, "Blockchain RPC HTTP error"),
+    BLOCKCHAIN_RPC_ERROR(50012, "Blockchain RPC error"),
+    BLOCKCHAIN_RPC_EMPTY_RESPONSE(50013, "Blockchain RPC returned empty response"),
     CONFIGURATION_ERROR(50001, "Configuration error"),
     SYSTEM_ERROR(50000, "System error");
 
