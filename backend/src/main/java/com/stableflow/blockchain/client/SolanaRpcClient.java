@@ -1,10 +1,10 @@
 package com.stableflow.blockchain.client;
 
+import com.stableflow.blockchain.converter.SolanaTransactionConverter;
 import com.stableflow.blockchain.dto.GetSignaturesForAddressResultDto;
 import com.stableflow.blockchain.dto.GetTransactionResultDto;
 import com.stableflow.blockchain.dto.JsonRpcResponseDto;
 import com.stableflow.blockchain.dto.SolanaRpcRequestDto;
-import com.stableflow.blockchain.mapper.SolanaTransactionMapper;
 import com.stableflow.blockchain.vo.SolanaTransactionDetailVo;
 import com.stableflow.blockchain.vo.SolanaTransactionSignatureVo;
 import java.util.LinkedHashMap;
@@ -22,14 +22,14 @@ public class SolanaRpcClient implements SolanaClient {
     private static final int REQUEST_ID_TRANSACTION = 2;
 
     private final RpcHttpClient rpcHttpClient;
-    private final SolanaTransactionMapper solanaTransactionMapper;
+    private final SolanaTransactionConverter solanaTransactionConverter;
 
     public SolanaRpcClient(
         RpcHttpClient rpcHttpClient,
-        SolanaTransactionMapper solanaTransactionMapper
+        SolanaTransactionConverter solanaTransactionConverter
     ) {
         this.rpcHttpClient = rpcHttpClient;
-        this.solanaTransactionMapper = solanaTransactionMapper;
+        this.solanaTransactionConverter = solanaTransactionConverter;
     }
 
     @Override
@@ -43,7 +43,7 @@ public class SolanaRpcClient implements SolanaClient {
             SolanaRpcRequestDto.of(REQUEST_ID_SIGNATURES, "getSignaturesForAddress", List.of(address, options)),
             new ParameterizedTypeReference<JsonRpcResponseDto<List<GetSignaturesForAddressResultDto>>>() {}
         );
-        return solanaTransactionMapper.toSignatureVos(result);
+        return solanaTransactionConverter.toSignatureVos(result);
     }
 
     @Override
@@ -60,6 +60,6 @@ public class SolanaRpcClient implements SolanaClient {
         if (result == null) {
             return null;
         }
-        return solanaTransactionMapper.toTransactionDetailVo(signature, result);
+        return solanaTransactionConverter.toTransactionDetailVo(signature, result);
     }
 }

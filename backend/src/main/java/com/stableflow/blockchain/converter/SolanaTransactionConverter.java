@@ -1,4 +1,4 @@
-package com.stableflow.blockchain.mapper;
+package com.stableflow.blockchain.converter;
 
 import com.stableflow.blockchain.dto.GetSignaturesForAddressResultDto;
 import com.stableflow.blockchain.dto.GetTransactionResultDto;
@@ -11,7 +11,7 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 @Component
-public class SolanaTransactionMapper {
+public class SolanaTransactionConverter {
 
     public List<SolanaTransactionSignatureVo> toSignatureVos(List<GetSignaturesForAddressResultDto> resultDtos) {
         if (resultDtos == null || resultDtos.isEmpty()) {
