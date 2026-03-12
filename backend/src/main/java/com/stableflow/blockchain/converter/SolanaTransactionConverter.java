@@ -4,14 +4,28 @@ import com.stableflow.blockchain.dto.GetSignaturesForAddressResultDto;
 import com.stableflow.blockchain.dto.GetTransactionResultDto;
 import com.stableflow.blockchain.vo.SolanaTransactionDetailVo;
 import com.stableflow.blockchain.vo.SolanaTransactionSignatureVo;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 
 @Component
 public class SolanaTransactionConverter {
+
+    private static final Set<String> TOKEN_TRANSFER_TYPES = Set.of("transfer", "transferchecked");
+    private static final Set<String> KNOWN_PROGRAM_IDS = Set.of(
+        "11111111111111111111111111111111",
+        "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+        "ComputeBudget111111111111111111111111111111",
+        "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr",
+        "SysvarRent111111111111111111111111111111111",
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+    );
 
     public List<SolanaTransactionSignatureVo> toSignatureVos(List<GetSignaturesForAddressResultDto> resultDtos) {
         if (resultDtos == null || resultDtos.isEmpty()) {
@@ -29,8 +43,23 @@ public class SolanaTransactionConverter {
         detailVo.setSignature(signature);
         detailVo.setSlot(resultDto.getSlot());
         detailVo.setBlockTime(toOffsetDateTime(resultDto.getBlockTime()));
-        detailVo.setMeta(toMetaVo(resultDto.getMeta()));
-        detailVo.setTransaction(toTransactionVo(resultDto.getTransaction()));
+        detailVo.setSuccess(resultDto.getMeta() == null || resultDto.getMeta().getErr() == null);
+        detailVo.setError(resultDto.getMeta() == null || resultDto.getMeta().getErr() == null
+            ? null
+            : resultDto.getMeta().getErr().toString());
+        detailVo.setFee(resultDto.getMeta() == null ? null : resultDto.getMeta().getFee());
+
+        TransferSnapshot transferSnapshot = extractPrimaryTransfer(resultDto);
+        detailVo.setPayerAddress(resolvePayerAddress(resultDto, transferSnapshot));
+        detailVo.setSourceAddress(transferSnapshot == null ? null : transferSnapshot.sourceAddress());
+        detailVo.setRecipientAddress(transferSnapshot == null ? null : transferSnapshot.recipientAddress());
+        detailVo.setMintAddress(transferSnapshot == null ? null : transferSnapshot.mintAddress());
+        detailVo.setAmount(transferSnapshot == null ? null : transferSnapshot.amount());
+        detailVo.setTransferType(transferSnapshot == null ? null : transferSnapshot.transferType());
+
+        List<String> referenceKeys = extractReferenceKeys(resultDto, transferSnapshot);
+        detailVo.setReferenceKeys(referenceKeys);
+        detailVo.setPrimaryReferenceKey(referenceKeys.isEmpty() ? null : referenceKeys.getFirst());
         return detailVo;
     }
 
@@ -43,104 +72,142 @@ public class SolanaTransactionConverter {
         return signatureVo;
     }
 
-    private SolanaTransactionDetailVo.MetaVo toMetaVo(GetTransactionResultDto.MetaDto metaDto) {
-        if (metaDto == null) {
+    private TransferSnapshot extractPrimaryTransfer(GetTransactionResultDto resultDto) {
+        if (resultDto == null || resultDto.getTransaction() == null || resultDto.getTransaction().getMessage() == null) {
             return null;
         }
 
-        SolanaTransactionDetailVo.MetaVo metaVo = new SolanaTransactionDetailVo.MetaVo();
-        metaVo.setSuccess(metaDto.getErr() == null);
-        metaVo.setError(metaDto.getErr() == null ? null : metaDto.getErr().toString());
-        metaVo.setFee(metaDto.getFee());
-        return metaVo;
-    }
-
-    private SolanaTransactionDetailVo.TransactionVo toTransactionVo(GetTransactionResultDto.TransactionDto transactionDto) {
-        if (transactionDto == null) {
+        List<GetTransactionResultDto.InstructionDto> instructions = resultDto.getTransaction().getMessage().getInstructions();
+        if (instructions == null || instructions.isEmpty()) {
             return null;
         }
 
-        SolanaTransactionDetailVo.TransactionVo transactionVo = new SolanaTransactionDetailVo.TransactionVo();
-        transactionVo.setMessage(toMessageVo(transactionDto.getMessage()));
-        return transactionVo;
+        for (GetTransactionResultDto.InstructionDto instructionDto : instructions) {
+            if (instructionDto == null || instructionDto.getParsed() == null || instructionDto.getParsed().getInfo() == null) {
+                continue;
+            }
+
+            String transferType = instructionDto.getParsed().getType();
+            if (transferType == null || !TOKEN_TRANSFER_TYPES.contains(transferType.toLowerCase(Locale.ROOT))) {
+                continue;
+            }
+
+            GetTransactionResultDto.InfoDto infoDto = instructionDto.getParsed().getInfo();
+            BigDecimal amount = parseAmount(infoDto.getTokenAmount());
+            if (amount == null) {
+                continue;
+            }
+
+            return new TransferSnapshot(
+                transferType,
+                infoDto.getSource(),
+                infoDto.getDestination(),
+                infoDto.getAuthority(),
+                infoDto.getMint(),
+                amount,
+                instructionDto.getProgramId()
+            );
+        }
+        return null;
     }
 
-    private SolanaTransactionDetailVo.MessageVo toMessageVo(GetTransactionResultDto.MessageDto messageDto) {
-        if (messageDto == null) {
+    private String resolvePayerAddress(GetTransactionResultDto resultDto, TransferSnapshot transferSnapshot) {
+        if (transferSnapshot != null && hasText(transferSnapshot.authorityAddress())) {
+            return transferSnapshot.authorityAddress();
+        }
+        if (resultDto == null || resultDto.getTransaction() == null || resultDto.getTransaction().getMessage() == null) {
             return null;
         }
 
-        SolanaTransactionDetailVo.MessageVo messageVo = new SolanaTransactionDetailVo.MessageVo();
-        messageVo.setAccountKeys(messageDto.getAccountKeys() == null
-            ? List.of()
-            : messageDto.getAccountKeys().stream().map(this::toAccountKeyVo).toList());
-        messageVo.setInstructions(messageDto.getInstructions() == null
-            ? List.of()
-            : messageDto.getInstructions().stream().map(this::toInstructionVo).toList());
-        return messageVo;
-    }
-
-    private SolanaTransactionDetailVo.AccountKeyVo toAccountKeyVo(GetTransactionResultDto.AccountKeyDto accountKeyDto) {
-        SolanaTransactionDetailVo.AccountKeyVo accountKeyVo = new SolanaTransactionDetailVo.AccountKeyVo();
-        if (accountKeyDto == null) {
-            return accountKeyVo;
-        }
-        accountKeyVo.setPubkey(accountKeyDto.getPubkey());
-        accountKeyVo.setSigner(accountKeyDto.getSigner());
-        accountKeyVo.setWritable(accountKeyDto.getWritable());
-        accountKeyVo.setSource(accountKeyDto.getSource());
-        return accountKeyVo;
-    }
-
-    private SolanaTransactionDetailVo.InstructionVo toInstructionVo(GetTransactionResultDto.InstructionDto instructionDto) {
-        SolanaTransactionDetailVo.InstructionVo instructionVo = new SolanaTransactionDetailVo.InstructionVo();
-        if (instructionDto == null) {
-            return instructionVo;
-        }
-        instructionVo.setProgram(instructionDto.getProgram());
-        instructionVo.setProgramId(instructionDto.getProgramId());
-        instructionVo.setParsed(toParsedVo(instructionDto.getParsed()));
-        return instructionVo;
-    }
-
-    private SolanaTransactionDetailVo.ParsedVo toParsedVo(GetTransactionResultDto.ParsedDto parsedDto) {
-        if (parsedDto == null) {
+        List<GetTransactionResultDto.AccountKeyDto> accountKeys = resultDto.getTransaction().getMessage().getAccountKeys();
+        if (accountKeys == null || accountKeys.isEmpty()) {
             return null;
         }
 
-        SolanaTransactionDetailVo.ParsedVo parsedVo = new SolanaTransactionDetailVo.ParsedVo();
-        parsedVo.setType(parsedDto.getType());
-        parsedVo.setInfo(toInfoVo(parsedDto.getInfo()));
-        return parsedVo;
+        return accountKeys.stream()
+            .filter(accountKeyDto -> accountKeyDto != null && Boolean.TRUE.equals(accountKeyDto.getSigner()))
+            .map(GetTransactionResultDto.AccountKeyDto::getPubkey)
+            .filter(this::hasText)
+            .findFirst()
+            .orElse(null);
     }
 
-    private SolanaTransactionDetailVo.InfoVo toInfoVo(GetTransactionResultDto.InfoDto infoDto) {
-        if (infoDto == null) {
-            return null;
+    private List<String> extractReferenceKeys(GetTransactionResultDto resultDto, TransferSnapshot transferSnapshot) {
+        if (resultDto == null || resultDto.getTransaction() == null || resultDto.getTransaction().getMessage() == null) {
+            return List.of();
         }
 
-        SolanaTransactionDetailVo.InfoVo infoVo = new SolanaTransactionDetailVo.InfoVo();
-        infoVo.setSource(infoDto.getSource());
-        infoVo.setDestination(infoDto.getDestination());
-        infoVo.setAuthority(infoDto.getAuthority());
-        infoVo.setMint(infoDto.getMint());
-        infoVo.setOwner(infoDto.getOwner());
-        infoVo.setAccount(infoDto.getAccount());
-        infoVo.setWallet(infoDto.getWallet());
-        infoVo.setTokenAmount(toTokenAmountVo(infoDto.getTokenAmount()));
-        return infoVo;
+        List<GetTransactionResultDto.AccountKeyDto> accountKeys = resultDto.getTransaction().getMessage().getAccountKeys();
+        if (accountKeys == null || accountKeys.isEmpty()) {
+            return List.of();
+        }
+
+        Set<String> excludedPubkeys = new LinkedHashSet<>(KNOWN_PROGRAM_IDS);
+        collectInstructionPubkeys(resultDto, excludedPubkeys);
+        if (transferSnapshot != null) {
+            addIfPresent(excludedPubkeys, transferSnapshot.authorityAddress());
+            addIfPresent(excludedPubkeys, transferSnapshot.sourceAddress());
+            addIfPresent(excludedPubkeys, transferSnapshot.recipientAddress());
+            addIfPresent(excludedPubkeys, transferSnapshot.mintAddress());
+            addIfPresent(excludedPubkeys, transferSnapshot.programId());
+        }
+
+        return accountKeys.stream()
+            .filter(accountKeyDto -> accountKeyDto != null && hasText(accountKeyDto.getPubkey()))
+            .filter(accountKeyDto -> !Boolean.TRUE.equals(accountKeyDto.getSigner()))
+            .filter(accountKeyDto -> !Boolean.TRUE.equals(accountKeyDto.getWritable()))
+            .map(GetTransactionResultDto.AccountKeyDto::getPubkey)
+            .filter(pubkey -> !excludedPubkeys.contains(pubkey))
+            .distinct()
+            .toList();
     }
 
-    private SolanaTransactionDetailVo.TokenAmountVo toTokenAmountVo(GetTransactionResultDto.TokenAmountDto tokenAmountDto) {
+    private void collectInstructionPubkeys(GetTransactionResultDto resultDto, Set<String> excludedPubkeys) {
+        List<GetTransactionResultDto.InstructionDto> instructions = resultDto.getTransaction().getMessage().getInstructions();
+        if (instructions == null || instructions.isEmpty()) {
+            return;
+        }
+
+        for (GetTransactionResultDto.InstructionDto instructionDto : instructions) {
+            if (instructionDto == null) {
+                continue;
+            }
+            addIfPresent(excludedPubkeys, instructionDto.getProgramId());
+            if (instructionDto.getParsed() == null || instructionDto.getParsed().getInfo() == null) {
+                continue;
+            }
+            GetTransactionResultDto.InfoDto infoDto = instructionDto.getParsed().getInfo();
+            addIfPresent(excludedPubkeys, infoDto.getSource());
+            addIfPresent(excludedPubkeys, infoDto.getDestination());
+            addIfPresent(excludedPubkeys, infoDto.getAuthority());
+            addIfPresent(excludedPubkeys, infoDto.getMint());
+            addIfPresent(excludedPubkeys, infoDto.getOwner());
+            addIfPresent(excludedPubkeys, infoDto.getAccount());
+            addIfPresent(excludedPubkeys, infoDto.getWallet());
+        }
+    }
+
+    private BigDecimal parseAmount(GetTransactionResultDto.TokenAmountDto tokenAmountDto) {
         if (tokenAmountDto == null) {
             return null;
         }
+        if (hasText(tokenAmountDto.getUiAmountString())) {
+            return new BigDecimal(tokenAmountDto.getUiAmountString());
+        }
+        if (!hasText(tokenAmountDto.getAmount()) || tokenAmountDto.getDecimals() == null) {
+            return null;
+        }
+        return new BigDecimal(tokenAmountDto.getAmount()).movePointLeft(tokenAmountDto.getDecimals());
+    }
 
-        SolanaTransactionDetailVo.TokenAmountVo tokenAmountVo = new SolanaTransactionDetailVo.TokenAmountVo();
-        tokenAmountVo.setAmount(tokenAmountDto.getAmount());
-        tokenAmountVo.setDecimals(tokenAmountDto.getDecimals());
-        tokenAmountVo.setUiAmountString(tokenAmountDto.getUiAmountString());
-        return tokenAmountVo;
+    private void addIfPresent(Set<String> values, String candidate) {
+        if (hasText(candidate)) {
+            values.add(candidate);
+        }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private OffsetDateTime toOffsetDateTime(Long epochSeconds) {
@@ -148,5 +215,16 @@ public class SolanaTransactionConverter {
             return null;
         }
         return Instant.ofEpochSecond(epochSeconds).atOffset(ZoneOffset.UTC);
+    }
+
+    private record TransferSnapshot(
+        String transferType,
+        String sourceAddress,
+        String recipientAddress,
+        String authorityAddress,
+        String mintAddress,
+        BigDecimal amount,
+        String programId
+    ) {
     }
 }

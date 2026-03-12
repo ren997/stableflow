@@ -1,5 +1,6 @@
 package com.stableflow.blockchain.vo;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import lombok.Data;
@@ -16,119 +17,36 @@ public class SolanaTransactionDetailVo {
     /** Block time in UTC / 区块时间（UTC） */
     private OffsetDateTime blockTime;
 
-    /** Execution metadata / 执行元数据 */
-    private MetaVo meta;
+    /** Whether transaction execution succeeded / 交易是否执行成功 */
+    private Boolean success;
 
-    /** Parsed transaction body / 结构化交易主体 */
-    private TransactionVo transaction;
+    /** Raw execution error if failed / 交易失败原始错误 */
+    private String error;
 
-    @Data
-    public static class MetaVo {
+    /** Network fee in lamports / 网络手续费（lamports） */
+    private Long fee;
 
-        /** Whether execution succeeded / 是否执行成功 */
-        private Boolean success;
+    /** Payer or transfer authority wallet / 付款钱包或转账授权钱包 */
+    private String payerAddress;
 
-        /** Raw error payload if failed / 执行失败原始错误 */
-        private String error;
+    /** Transfer destination address / 转账目标地址 */
+    private String recipientAddress;
 
-        /** Network fee in lamports / 网络手续费 */
-        private Long fee;
-    }
+    /** Source token account / 来源 token 账户 */
+    private String sourceAddress;
 
-    @Data
-    public static class TransactionVo {
+    /** Token mint address / 代币 Mint 地址 */
+    private String mintAddress;
 
-        /** Parsed message / 结构化消息体 */
-        private MessageVo message;
-    }
+    /** Parsed transfer amount / 解析出的转账金额 */
+    private BigDecimal amount;
 
-    @Data
-    public static class MessageVo {
+    /** Parsed transfer type / 解析出的转账类型 */
+    private String transferType;
 
-        /** Account keys involved in the transaction / 交易账户列表 */
-        private List<AccountKeyVo> accountKeys;
+    /** Reference candidates extracted from the transaction / 交易中提取出的 reference 候选 */
+    private List<String> referenceKeys;
 
-        /** Top-level parsed instructions / 顶层解析指令 */
-        private List<InstructionVo> instructions;
-    }
-
-    @Data
-    public static class AccountKeyVo {
-
-        /** Account public key / 账户公钥 */
-        private String pubkey;
-
-        /** Whether signer / 是否签名账户 */
-        private Boolean signer;
-
-        /** Whether writable / 是否可写 */
-        private Boolean writable;
-
-        /** Source marker from RPC / RPC 来源标记 */
-        private String source;
-    }
-
-    @Data
-    public static class InstructionVo {
-
-        /** Program name / 程序名称 */
-        private String program;
-
-        /** Program id / 程序 ID */
-        private String programId;
-
-        /** Parsed instruction payload / 解析后的指令载荷 */
-        private ParsedVo parsed;
-    }
-
-    @Data
-    public static class ParsedVo {
-
-        /** Parsed instruction type / 解析后的指令类型 */
-        private String type;
-
-        /** Parsed instruction info / 解析后的指令信息 */
-        private InfoVo info;
-    }
-
-    @Data
-    public static class InfoVo {
-
-        /** Source wallet or token account / 来源账户 */
-        private String source;
-
-        /** Destination wallet or token account / 目标账户 */
-        private String destination;
-
-        /** Authority account / 授权账户 */
-        private String authority;
-
-        /** Token mint address / 代币 Mint 地址 */
-        private String mint;
-
-        /** Account owner / 账户拥有者 */
-        private String owner;
-
-        /** Account address / 账户地址 */
-        private String account;
-
-        /** Wallet address / 钱包地址 */
-        private String wallet;
-
-        /** Token amount details / 代币金额信息 */
-        private TokenAmountVo tokenAmount;
-    }
-
-    @Data
-    public static class TokenAmountVo {
-
-        /** Raw amount / 原始金额 */
-        private String amount;
-
-        /** Decimal places / 小数位数 */
-        private Integer decimals;
-
-        /** UI amount string / 展示金额字符串 */
-        private String uiAmountString;
-    }
+    /** First reference candidate for matching / 首个 reference 候选 */
+    private String primaryReferenceKey;
 }
