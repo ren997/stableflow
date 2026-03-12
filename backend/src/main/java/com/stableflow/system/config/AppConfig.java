@@ -4,6 +4,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@EnableConfigurationProperties({SecurityProperties.class, PaymentProperties.class})
+@EnableConfigurationProperties({SecurityProperties.class, PaymentProperties.class, SolanaProperties.class})
 public class AppConfig {
 }
