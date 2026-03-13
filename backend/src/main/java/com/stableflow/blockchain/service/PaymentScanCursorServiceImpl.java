@@ -1,6 +1,7 @@
 package com.stableflow.blockchain.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.stableflow.blockchain.entity.PaymentScanCursor;
 import com.stableflow.blockchain.mapper.PaymentScanCursorMapper;
 import java.time.OffsetDateTime;
@@ -9,7 +10,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class PaymentScanCursorServiceImpl implements PaymentScanCursorService {
+public class PaymentScanCursorServiceImpl
+    extends ServiceImpl<PaymentScanCursorMapper, PaymentScanCursor>
+    implements PaymentScanCursorService {
 
     private final PaymentScanCursorMapper paymentScanCursorMapper;
 

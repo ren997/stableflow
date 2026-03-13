@@ -22,6 +22,7 @@ Use interface and implementation layering for services:
 - `XxxService` for the service interface
 - `XxxServiceImpl` for the Spring-managed implementation
 - Controllers and peer services should depend on the interface
+- CRUD-oriented MyBatis-Plus services should prefer `IService<Entity>` and `ServiceImpl<Mapper, Entity>`
 
 ### Local setup
 

@@ -1,8 +1,9 @@
 package com.stableflow.blockchain.service;
 
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.stableflow.blockchain.entity.PaymentScanCursor;
 
-public interface PaymentScanCursorService {
+public interface PaymentScanCursorService extends IService<PaymentScanCursor> {
 
     /** Return the existing cursor for a recipient address or create one / 获取指定收款地址的扫描游标，不存在时自动创建 */
     PaymentScanCursor getOrCreate(String recipientAddress);

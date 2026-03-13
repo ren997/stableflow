@@ -1,11 +1,12 @@
 package com.stableflow.merchant.service;
 
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.stableflow.merchant.dto.MerchantPaymentConfigRequestDto;
 import com.stableflow.merchant.entity.MerchantPaymentConfig;
 import com.stableflow.merchant.vo.MerchantPaymentConfigVo;
 import java.util.List;
 
-public interface MerchantPaymentConfigService {
+public interface MerchantPaymentConfigService extends IService<MerchantPaymentConfig> {
 
     /** Create or update the current merchant payment configuration / 创建或更新当前商家的收款配置 */
     MerchantPaymentConfigVo saveOrUpdate(MerchantPaymentConfigRequestDto request);

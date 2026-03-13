@@ -1,8 +1,9 @@
 package com.stableflow.blockchain.service;
 
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.stableflow.blockchain.entity.PaymentTransaction;
 
-public interface PaymentTransactionService {
+public interface PaymentTransactionService extends IService<PaymentTransaction> {
 
     /** Check whether a blockchain transaction has already been persisted / 检查链上交易是否已经落库 */
     boolean existsByTxHash(String txHash);

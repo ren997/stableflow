@@ -1,6 +1,7 @@
 package com.stableflow.merchant.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.stableflow.merchant.dto.MerchantPaymentConfigRequestDto;
 import com.stableflow.merchant.entity.MerchantPaymentConfig;
 import com.stableflow.merchant.mapper.MerchantPaymentConfigMapper;
@@ -13,7 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigService {
+public class MerchantPaymentConfigServiceImpl
+    extends ServiceImpl<MerchantPaymentConfigMapper, MerchantPaymentConfig>
+    implements MerchantPaymentConfigService {
 
     private final MerchantPaymentConfigMapper paymentConfigMapper;
     private final CurrentMerchantProvider currentMerchantProvider;

@@ -1,12 +1,14 @@
 package com.stableflow.invoice.service;
 
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.stableflow.invoice.dto.CreateInvoiceRequestDto;
+import com.stableflow.invoice.entity.Invoice;
 import com.stableflow.invoice.vo.InvoiceDetailVo;
 import com.stableflow.invoice.vo.InvoiceListItemVo;
 import com.stableflow.invoice.vo.PaymentInfoVo;
 import java.util.List;
 
-public interface InvoiceService {
+public interface InvoiceService extends IService<Invoice> {
 
     /** Create an invoice and snapshot its payment request / 创建账单并生成支付请求快照 */
     InvoiceDetailVo createInvoice(CreateInvoiceRequestDto request);

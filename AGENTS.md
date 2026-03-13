@@ -25,6 +25,8 @@
 - Name the interface as `XxxService` and the implementation as `XxxServiceImpl`.
 - Controllers and other services should depend on the service interface instead of the implementation class.
 - Put the interface and implementation in the same business module `service` package unless there is a strong reason to split them further.
+- For CRUD-oriented MyBatis-Plus services, prefer `XxxService extends IService<Entity>` and `XxxServiceImpl extends ServiceImpl<Mapper, Entity>`.
+- Do not force `IService` onto orchestration-style services that are not centered on a single entity aggregate.
 
 ## Commit Messages
 

@@ -1,6 +1,7 @@
 package com.stableflow.invoice.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.stableflow.invoice.dto.CreateInvoiceRequestDto;
 import com.stableflow.invoice.entity.Invoice;
 import com.stableflow.invoice.entity.InvoicePaymentRequest;
@@ -28,7 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class InvoiceServiceImpl implements InvoiceService {
+public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> implements InvoiceService {
 
     private static final String DEFAULT_CHAIN = "SOLANA";
     private static final String DEFAULT_CURRENCY = "USDC";

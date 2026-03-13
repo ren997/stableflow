@@ -1,13 +1,16 @@
 package com.stableflow.blockchain.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.stableflow.blockchain.entity.PaymentTransaction;
 import com.stableflow.blockchain.mapper.PaymentTransactionMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class PaymentTransactionServiceImpl implements PaymentTransactionService {
+public class PaymentTransactionServiceImpl
+    extends ServiceImpl<PaymentTransactionMapper, PaymentTransaction>
+    implements PaymentTransactionService {
 
     private final PaymentTransactionMapper paymentTransactionMapper;
 
