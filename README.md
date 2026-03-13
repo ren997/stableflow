@@ -24,6 +24,11 @@ Use interface and implementation layering for services:
 - Controllers and peer services should depend on the interface
 - CRUD-oriented MyBatis-Plus services should prefer `IService<Entity>` and `ServiceImpl<Mapper, Entity>`
 
+## Comment conventions
+
+- Request, response, and entity fields should have concise field comments
+- Public service interface methods should have concise contract comments
+
 ### Local setup
 
 ```bash

@@ -12,6 +12,7 @@
 - Prefer explicit Java entities for request and response models.
 - If a response contains nested structures, prefer static inner classes inside the outer `Vo`.
 - Add concise field comments for request and response model fields.
+- Add concise field comments for entity fields as well, especially for persistence identifiers, status fields, timestamps, and business keys.
 
 ## Code Comments
 

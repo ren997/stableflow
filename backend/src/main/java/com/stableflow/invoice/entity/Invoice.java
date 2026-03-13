@@ -11,20 +11,49 @@ import lombok.Data;
 @TableName("invoice")
 public class Invoice {
 
+    /** Primary key / 主键 */
     @TableId(type = IdType.AUTO)
     private Long id;
+
+    /** Public invoice identifier for external access / 对外访问使用的账单公开标识 */
     private String publicId;
+
+    /** Merchant id owning the invoice / 账单所属商家 ID */
     private Long merchantId;
+
+    /** Business invoice number / 业务账单编号 */
     private String invoiceNo;
+
+    /** Customer display name / 客户展示名称 */
     private String customerName;
+
+    /** Expected payable amount / 应付金额 */
     private BigDecimal amount;
+
+    /** Invoice currency code / 账单币种代码 */
     private String currency;
+
+    /** Blockchain network name / 区块链网络名称 */
     private String chain;
+
+    /** Invoice description / 账单描述 */
     private String description;
+
+    /** Current invoice status / 当前账单状态 */
     private String status;
+
+    /** Serialized exception tags / 序列化后的异常标签 */
     private String exceptionTags;
+
+    /** Invoice expiry time in UTC / 账单过期时间（UTC） */
     private OffsetDateTime expireAt;
+
+    /** Final paid time in UTC / 最终支付时间（UTC） */
     private OffsetDateTime paidAt;
+
+    /** Record created time in UTC / 记录创建时间（UTC） */
     private OffsetDateTime createdAt;
+
+    /** Record updated time in UTC / 记录更新时间（UTC） */
     private OffsetDateTime updatedAt;
 }
