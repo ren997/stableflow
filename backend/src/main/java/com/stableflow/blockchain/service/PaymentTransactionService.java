@@ -1,32 +1,12 @@
 package com.stableflow.blockchain.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stableflow.blockchain.entity.PaymentTransaction;
-import com.stableflow.blockchain.mapper.PaymentTransactionMapper;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-@Service
-public class PaymentTransactionService {
+public interface PaymentTransactionService {
 
-    private final PaymentTransactionMapper paymentTransactionMapper;
+    /** Check whether a blockchain transaction has already been persisted / 检查链上交易是否已经落库 */
+    boolean existsByTxHash(String txHash);
 
-    public PaymentTransactionService(PaymentTransactionMapper paymentTransactionMapper) {
-        this.paymentTransactionMapper = paymentTransactionMapper;
-    }
-
-    public boolean existsByTxHash(String txHash) {
-        return paymentTransactionMapper.selectCount(
-            new LambdaQueryWrapper<PaymentTransaction>().eq(PaymentTransaction::getTxHash, txHash)
-        ) > 0;
-    }
-
-    @Transactional
-    public boolean saveIfAbsent(PaymentTransaction paymentTransaction) {
-        if (existsByTxHash(paymentTransaction.getTxHash())) {
-            return false;
-        }
-        paymentTransactionMapper.insert(paymentTransaction);
-        return true;
-    }
+    /** Persist a transaction only when its hash has not been seen before / 仅在交易哈希未出现过时落库 */
+    boolean saveIfAbsent(PaymentTransaction paymentTransaction);
 }

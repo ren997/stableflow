@@ -15,6 +15,14 @@ StableFlow is a workflow-driven stablecoin billing, payment, and reconciliation 
 
 This repository uses `commitlint` with the Conventional Commits preset.
 
+## Service conventions
+
+Use interface and implementation layering for services:
+
+- `XxxService` for the service interface
+- `XxxServiceImpl` for the Spring-managed implementation
+- Controllers and peer services should depend on the interface
+
 ### Local setup
 
 ```bash

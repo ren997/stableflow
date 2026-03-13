@@ -60,7 +60,7 @@ class PaymentScanServiceTest {
 
     @BeforeEach
     void setUp() {
-        paymentScanService = new PaymentScanService(
+        paymentScanService = new PaymentScanServiceImpl(
             solanaClient,
             merchantPaymentConfigService,
             paymentScanCursorService,

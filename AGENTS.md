@@ -19,6 +19,13 @@
 - Interface-layer methods should explain the contract briefly, including the purpose of key parameters or special behavior when it is not obvious.
 - Keep comments short and high-signal; avoid repeating what is already obvious from the method name.
 
+## Service Layer
+
+- Service definitions should use interface and implementation layering consistently.
+- Name the interface as `XxxService` and the implementation as `XxxServiceImpl`.
+- Controllers and other services should depend on the service interface instead of the implementation class.
+- Put the interface and implementation in the same business module `service` package unless there is a strong reason to split them further.
+
 ## Commit Messages
 
 - Use the format `<type>(<module>): <主题>`.
