@@ -59,6 +59,7 @@ public class PaymentScanServiceImpl implements PaymentScanService {
     @Override
     public int scanAllActiveAddresses() {
         int totalInserted = 0;
+        // 只扫描启用中的商家收款地址，先把 MVP 主链路收敛在有效配置上。
         for (MerchantPaymentConfig paymentConfig : merchantPaymentConfigService.listActiveConfigs()) {
             totalInserted += scanRecipientAddress(paymentConfig);
         }
@@ -69,6 +70,8 @@ public class PaymentScanServiceImpl implements PaymentScanService {
     public int scanRecipientAddress(MerchantPaymentConfig paymentConfig) {
         String recipientAddress = paymentConfig.getWalletAddress();
         PaymentScanCursor cursor = paymentScanCursorService.getOrCreate(recipientAddress);
+
+        // 只拉取上次扫描游标之后出现的新签名，避免每次都全量回扫历史交易。
         List<SolanaTransactionSignatureVo> candidateSignatures = fetchNewSignatures(
             recipientAddress,
             cursor.getLastSeenSignature(),
@@ -82,6 +85,7 @@ public class PaymentScanServiceImpl implements PaymentScanService {
 
         String newestProcessedSignature = candidateSignatures.getFirst().getSignature();
         List<SolanaTransactionSignatureVo> signaturesToProcess = new ArrayList<>(candidateSignatures);
+        // 按从旧到新的顺序处理，后续验证和核销看到的交易时序会更稳定。
         Collections.reverse(signaturesToProcess);
 
         int insertedCount = 0;
@@ -96,6 +100,7 @@ public class PaymentScanServiceImpl implements PaymentScanService {
             }
         }
 
+        // 整个地址批次处理完成后再推进游标，避免处理中途失败导致交易漏扫。
         paymentScanCursorService.updateCursor(recipientAddress, newestProcessedSignature);
         log.info(
             "Scanned recipientAddress={}, newSignatures={}, inserted={}",
@@ -112,6 +117,7 @@ public class PaymentScanServiceImpl implements PaymentScanService {
         boolean reachedExistingCursor = false;
 
         while (true) {
+            // 按签名分页向历史方向翻页，直到碰到上次记录的游标为止。
             List<SolanaTransactionSignatureVo> batch = solanaClient.getSignaturesForAddress(address, batchSize, beforeSignature);
             if (batch == null || batch.isEmpty()) {
                 break;
@@ -119,6 +125,7 @@ public class PaymentScanServiceImpl implements PaymentScanService {
 
             for (SolanaTransactionSignatureVo signatureVo : batch) {
                 if (lastSeenSignature != null && lastSeenSignature.equals(signatureVo.getSignature())) {
+                    // 一旦命中旧游标，说明后面的签名都已经扫描过了，可以停止收集。
                     reachedExistingCursor = true;
                     break;
                 }
@@ -135,6 +142,7 @@ public class PaymentScanServiceImpl implements PaymentScanService {
     }
 
     private PaymentTransaction toPaymentTransaction(SolanaTransactionDetailVo transactionDetail) {
+        // 把链上解析结果转换成数据库持久化模型，供后续验证和核销阶段继续使用。
         PaymentTransaction paymentTransaction = new PaymentTransaction();
         paymentTransaction.setTxHash(transactionDetail.getSignature());
         paymentTransaction.setReferenceKey(transactionDetail.getPrimaryReferenceKey());
@@ -154,6 +162,7 @@ public class PaymentScanServiceImpl implements PaymentScanService {
         if (mintAddress == null || mintAddress.isBlank()) {
             return DEFAULT_CURRENCY_UNKNOWN;
         }
+        // MVP 阶段只把配置里的 USDC mint 识别成 USDC，其它资产先统一记为 UNKNOWN。
         return mintAddress.equals(solanaProperties.usdcMintAddress()) ? DEFAULT_CURRENCY_USDC : DEFAULT_CURRENCY_UNKNOWN;
     }
 

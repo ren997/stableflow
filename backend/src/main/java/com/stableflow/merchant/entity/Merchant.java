@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.OffsetDateTime;
 import lombok.Data;
 
+/** Merchant account entity used for authentication and ownership boundaries / 用于认证和业务归属边界的商家账户实体 */
 @Data
 @TableName("merchant")
 public class Merchant {

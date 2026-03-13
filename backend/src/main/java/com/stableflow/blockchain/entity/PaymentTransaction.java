@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import lombok.Data;
 
+/** Candidate on-chain payment transaction discovered before verification / 支付验证前通过链上扫描发现的候选支付交易实体 */
 @Data
 @TableName(value = "payment_transaction", autoResultMap = true)
 public class PaymentTransaction {

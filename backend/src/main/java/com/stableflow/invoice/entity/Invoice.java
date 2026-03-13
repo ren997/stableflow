@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import lombok.Data;
 
+/** Merchant invoice aggregate that represents the payable business order / 表示商家应收业务订单的账单聚合实体 */
 @Data
 @TableName("invoice")
 public class Invoice {

@@ -11,14 +11,15 @@
 - Do not expose raw `JsonNode` or generic JSON structures as outward-facing return models when the structure is known.
 - Prefer explicit Java entities for request and response models.
 - If a response contains nested structures, prefer static inner classes inside the outer `Vo`.
-- Add concise field comments for request and response model fields.
-- Add concise field comments for entity fields as well, especially for persistence identifiers, status fields, timestamps, and business keys.
 
-## Code Comments
+## Comment Conventions
 
-- Add concise method comments for public interface methods and other externally consumed public methods.
-- Interface-layer methods should explain the contract briefly, including the purpose of key parameters or special behavior when it is not obvious.
-- Keep comments short and high-signal; avoid repeating what is already obvious from the method name.
+- Request, response, and entity fields should have concise field comments.
+- Core entity classes should have a brief class-level comment that explains their responsibility in the business flow.
+- Public service interface methods and other externally consumed public methods should have concise contract comments.
+- Scheduled job classes and scheduled methods should have brief comments explaining the trigger purpose and business responsibility.
+- Interface-layer comments should explain the contract briefly, including key parameters or special behavior when it is not obvious.
+- Keep comments short and high-signal; avoid repeating what is already obvious from the method or field name.
 
 ## Service Layer
 

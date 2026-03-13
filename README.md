@@ -27,7 +27,9 @@ Use interface and implementation layering for services:
 ## Comment conventions
 
 - Request, response, and entity fields should have concise field comments
+- Core entity classes should have brief class-level responsibility comments
 - Public service interface methods should have concise contract comments
+- Scheduled job classes and scheduled methods should have brief purpose comments
 
 ### Local setup
 

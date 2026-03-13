@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.OffsetDateTime;
 import lombok.Data;
 
+/** Scan cursor for recipient-address-based payment discovery / 基于收款地址扫描候选支付交易时使用的增量游标实体 */
 @Data
 @TableName("payment_scan_cursor")
 public class PaymentScanCursor {

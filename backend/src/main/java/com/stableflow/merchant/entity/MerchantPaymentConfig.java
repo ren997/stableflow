@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.OffsetDateTime;
 import lombok.Data;
 
+/** Active fixed-address payment configuration owned by a merchant / 商家持有的固定收款地址配置实体 */
 @Data
 @TableName("merchant_payment_config")
 public class MerchantPaymentConfig {

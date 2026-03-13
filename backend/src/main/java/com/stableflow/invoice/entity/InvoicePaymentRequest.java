@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import lombok.Data;
 
+/** Snapshot of the payment request generated for an invoice / 为账单生成的支付请求快照实体 */
 @Data
 @TableName("invoice_payment_request")
 public class InvoicePaymentRequest {
