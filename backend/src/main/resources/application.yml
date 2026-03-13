@@ -50,5 +50,10 @@ stableflow:
     usdc-mint-address: ${SOLANA_USDC_MINT:replace-me}
     connect-timeout: ${SOLANA_CONNECT_TIMEOUT:3s}
     read-timeout: ${SOLANA_READ_TIMEOUT:10s}
+    scan:
+      enabled: ${SOLANA_SCAN_ENABLED:true}
+      batch-size: ${SOLANA_SCAN_BATCH_SIZE:50}
+      fixed-delay-ms: ${SOLANA_SCAN_FIXED_DELAY_MS:30000}
+      initial-delay-ms: ${SOLANA_SCAN_INITIAL_DELAY_MS:10000}
   agent:
     api-key: ${AGENT_API_KEY:replace-me}

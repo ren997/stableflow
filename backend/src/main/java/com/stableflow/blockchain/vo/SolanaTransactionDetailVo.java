@@ -49,4 +49,7 @@ public class SolanaTransactionDetailVo {
 
     /** First reference candidate for matching / 首个 reference 候选 */
     private String primaryReferenceKey;
+
+    /** Serialized raw RPC transaction payload / 序列化后的原始 RPC 交易载荷 */
+    private String rawPayload;
 }

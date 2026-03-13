@@ -8,6 +8,7 @@ import com.stableflow.merchant.vo.MerchantPaymentConfigVo;
 import com.stableflow.system.exception.BusinessException;
 import com.stableflow.system.exception.ErrorCode;
 import com.stableflow.system.security.CurrentMerchantProvider;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,6 +63,13 @@ public class MerchantPaymentConfigService {
             throw new BusinessException(ErrorCode.PAYMENT_CONFIG_NOT_FOUND);
         }
         return config;
+    }
+
+    public List<MerchantPaymentConfig> listActiveConfigs() {
+        return paymentConfigMapper.selectList(
+            new LambdaQueryWrapper<MerchantPaymentConfig>()
+                .eq(MerchantPaymentConfig::getActiveFlag, Boolean.TRUE)
+        );
     }
 
     private MerchantPaymentConfigVo toResponse(MerchantPaymentConfig config) {

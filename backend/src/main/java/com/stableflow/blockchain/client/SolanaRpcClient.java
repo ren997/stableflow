@@ -9,6 +9,8 @@ import com.stableflow.blockchain.dto.JsonRpcResponseDto;
 import com.stableflow.blockchain.dto.SolanaRpcRequestDto;
 import com.stableflow.blockchain.vo.SolanaTransactionDetailVo;
 import com.stableflow.blockchain.vo.SolanaTransactionSignatureVo;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stableflow.system.exception.BusinessException;
 import com.stableflow.system.exception.ErrorCode;
 import java.util.List;
@@ -25,21 +27,29 @@ public class SolanaRpcClient implements SolanaClient {
 
     private final RpcHttpClient rpcHttpClient;
     private final SolanaTransactionConverter solanaTransactionConverter;
+    private final ObjectMapper objectMapper;
 
     public SolanaRpcClient(
         RpcHttpClient rpcHttpClient,
-        SolanaTransactionConverter solanaTransactionConverter
+        SolanaTransactionConverter solanaTransactionConverter,
+        ObjectMapper objectMapper
     ) {
         this.rpcHttpClient = rpcHttpClient;
         this.solanaTransactionConverter = solanaTransactionConverter;
+        this.objectMapper = objectMapper;
     }
 
     @Override
     public List<SolanaTransactionSignatureVo> getSignaturesForAddress(String address, int limit) {
+        return getSignaturesForAddress(address, limit, null);
+    }
+
+    @Override
+    public List<SolanaTransactionSignatureVo> getSignaturesForAddress(String address, int limit, String beforeSignature) {
         validateAddress(address);
         validateLimit(limit);
         GetSignaturesForAddressOptionsDto optionsDto =
-            new GetSignaturesForAddressOptionsDto(limit, COMMITMENT_CONFIRMED);
+            new GetSignaturesForAddressOptionsDto(limit, beforeSignature, COMMITMENT_CONFIRMED);
 
         // Build request -> execute shared RPC HTTP call -> map RPC DTO into service VO.
         List<GetSignaturesForAddressResultDto> result = rpcHttpClient.call(
@@ -62,7 +72,9 @@ public class SolanaRpcClient implements SolanaClient {
         if (result == null) {
             return null;
         }
-        return solanaTransactionConverter.toTransactionDetailVo(signature, result);
+        SolanaTransactionDetailVo detailVo = solanaTransactionConverter.toTransactionDetailVo(signature, result);
+        detailVo.setRawPayload(serializeRawPayload(result));
+        return detailVo;
     }
 
     private void validateAddress(String address) {
@@ -80,6 +92,17 @@ public class SolanaRpcClient implements SolanaClient {
     private void validateLimit(int limit) {
         if (limit <= 0) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "limit must be greater than 0");
+        }
+    }
+
+    private String serializeRawPayload(GetTransactionResultDto result) {
+        try {
+            return objectMapper.writeValueAsString(result);
+        } catch (JsonProcessingException ex) {
+            throw new BusinessException(
+                ErrorCode.SYSTEM_ERROR,
+                "Failed to serialize Solana transaction payload: " + ex.getOriginalMessage()
+            );
         }
     }
 }

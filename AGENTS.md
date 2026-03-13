@@ -13,6 +13,12 @@
 - If a response contains nested structures, prefer static inner classes inside the outer `Vo`.
 - Add concise field comments for request and response model fields.
 
+## Code Comments
+
+- Add concise method comments for public interface methods and other externally consumed public methods.
+- Interface-layer methods should explain the contract briefly, including the purpose of key parameters or special behavior when it is not obvious.
+- Keep comments short and high-signal; avoid repeating what is already obvious from the method name.
+
 ## Commit Messages
 
 - Use the format `<type>(<module>): <主题>`.
