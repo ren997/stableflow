@@ -17,8 +17,10 @@
 ## Comment Conventions
 
 - Request, response, and entity fields should have concise field comments.
+- Record classes should have brief class-level comments, and record components should have concise field comments.
 - Core entity classes should have a brief class-level comment that explains their responsibility in the business flow.
 - Public service interface methods and other externally consumed public methods should have concise contract comments.
+- Business orchestration code should have brief process comments at key steps so readers can quickly understand the main flow.
 - Scheduled job classes and scheduled methods should have brief comments explaining the trigger purpose and business responsibility.
 - Interface-layer comments should explain the contract briefly, including key parameters or special behavior when it is not obvious.
 - Enum classes should have brief class-level comments, and enum items should carry readable descriptions when they represent business states or externally visible codes.

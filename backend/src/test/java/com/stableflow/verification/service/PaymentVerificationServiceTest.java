@@ -11,8 +11,8 @@ import com.stableflow.blockchain.service.PaymentTransactionService;
 import com.stableflow.invoice.entity.Invoice;
 import com.stableflow.invoice.entity.InvoicePaymentRequest;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
-import com.stableflow.invoice.service.InvoiceService;
 import com.stableflow.invoice.mapper.InvoicePaymentRequestMapper;
+import com.stableflow.invoice.service.InvoiceService;
 import com.stableflow.verification.enums.PaymentTransactionStatusEnum;
 import com.stableflow.verification.enums.PaymentVerificationResultEnum;
 import com.stableflow.verification.vo.PaymentVerificationResultVo;
@@ -38,14 +38,19 @@ class PaymentVerificationServiceTest {
     @Mock
     private InvoiceService invoiceService;
 
+    private SinglePaymentVerificationService singlePaymentVerificationService;
     private PaymentVerificationService paymentVerificationService;
 
     @BeforeEach
     void setUp() {
-        paymentVerificationService = new PaymentVerificationServiceImpl(
+        singlePaymentVerificationService = new SinglePaymentVerificationServiceImpl(
             paymentTransactionService,
             invoicePaymentRequestMapper,
             invoiceService
+        );
+        paymentVerificationService = new PaymentVerificationServiceImpl(
+            paymentTransactionService,
+            singlePaymentVerificationService
         );
     }
 
@@ -53,7 +58,7 @@ class PaymentVerificationServiceTest {
     void shouldMarkTransactionAsMissingReference() {
         PaymentTransaction paymentTransaction = transaction(1L, "tx-1", null, "10.00", "usdc-mint", utc("2026-03-17T10:00:00Z"));
 
-        PaymentVerificationResultVo result = paymentVerificationService.verifyTransaction(paymentTransaction);
+        PaymentVerificationResultVo result = singlePaymentVerificationService.verifyTransaction(paymentTransaction);
 
         assertEquals(PaymentVerificationResultEnum.MISSING_REFERENCE, result.verificationResult());
         assertEquals(PaymentTransactionStatusEnum.UNMATCHED, result.paymentStatus());
@@ -65,7 +70,7 @@ class PaymentVerificationServiceTest {
         PaymentTransaction paymentTransaction = transaction(2L, "tx-2", "ref-missing", "10.00", "usdc-mint", utc("2026-03-17T10:00:00Z"));
         when(invoicePaymentRequestMapper.selectOne(any())).thenReturn(null);
 
-        PaymentVerificationResultVo result = paymentVerificationService.verifyTransaction(paymentTransaction);
+        PaymentVerificationResultVo result = singlePaymentVerificationService.verifyTransaction(paymentTransaction);
 
         assertEquals(PaymentVerificationResultEnum.INVALID_REFERENCE, result.verificationResult());
         assertEquals(PaymentTransactionStatusEnum.UNMATCHED, result.paymentStatus());
@@ -78,7 +83,7 @@ class PaymentVerificationServiceTest {
         when(invoicePaymentRequestMapper.selectOne(any())).thenReturn(paymentRequest(100L, "ref-1", "usdc-mint", "10.00", utc("2026-03-18T10:00:00Z")));
         when(invoiceService.getById(100L)).thenReturn(invoice(100L));
 
-        PaymentVerificationResultVo result = paymentVerificationService.verifyTransaction(paymentTransaction);
+        PaymentVerificationResultVo result = singlePaymentVerificationService.verifyTransaction(paymentTransaction);
 
         assertEquals(PaymentVerificationResultEnum.WRONG_CURRENCY, result.verificationResult());
         assertEquals(PaymentTransactionStatusEnum.UNMATCHED, result.paymentStatus());
@@ -92,7 +97,7 @@ class PaymentVerificationServiceTest {
         when(invoiceService.getById(101L)).thenReturn(invoice(101L));
         when(paymentTransactionService.list(anyWrapper())).thenReturn(List.of());
 
-        PaymentVerificationResultVo result = paymentVerificationService.verifyTransaction(paymentTransaction);
+        PaymentVerificationResultVo result = singlePaymentVerificationService.verifyTransaction(paymentTransaction);
 
         assertEquals(PaymentVerificationResultEnum.PAID, result.verificationResult());
         assertEquals(PaymentTransactionStatusEnum.PAID, result.paymentStatus());
@@ -106,7 +111,7 @@ class PaymentVerificationServiceTest {
         when(invoiceService.getById(102L)).thenReturn(invoice(102L));
         when(paymentTransactionService.list(anyWrapper())).thenReturn(List.of());
 
-        PaymentVerificationResultVo result = paymentVerificationService.verifyTransaction(paymentTransaction);
+        PaymentVerificationResultVo result = singlePaymentVerificationService.verifyTransaction(paymentTransaction);
 
         assertEquals(PaymentVerificationResultEnum.PARTIALLY_PAID, result.verificationResult());
         assertEquals(PaymentTransactionStatusEnum.PARTIALLY_PAID, result.paymentStatus());
@@ -119,7 +124,7 @@ class PaymentVerificationServiceTest {
         when(invoiceService.getById(103L)).thenReturn(invoice(103L));
         when(paymentTransactionService.list(anyWrapper())).thenReturn(List.of());
 
-        PaymentVerificationResultVo result = paymentVerificationService.verifyTransaction(paymentTransaction);
+        PaymentVerificationResultVo result = singlePaymentVerificationService.verifyTransaction(paymentTransaction);
 
         assertEquals(PaymentVerificationResultEnum.OVERPAID, result.verificationResult());
         assertEquals(PaymentTransactionStatusEnum.OVERPAID, result.paymentStatus());
@@ -131,7 +136,7 @@ class PaymentVerificationServiceTest {
         when(invoicePaymentRequestMapper.selectOne(any())).thenReturn(paymentRequest(104L, "ref-5", "usdc-mint", "10.00", utc("2026-03-18T10:00:00Z")));
         when(invoiceService.getById(104L)).thenReturn(invoice(104L));
 
-        PaymentVerificationResultVo result = paymentVerificationService.verifyTransaction(paymentTransaction);
+        PaymentVerificationResultVo result = singlePaymentVerificationService.verifyTransaction(paymentTransaction);
 
         assertEquals(PaymentVerificationResultEnum.LATE_PAYMENT, result.verificationResult());
         assertEquals(PaymentTransactionStatusEnum.EXPIRED, result.paymentStatus());
@@ -152,6 +157,43 @@ class PaymentVerificationServiceTest {
 
         assertEquals(PaymentVerificationResultEnum.DUPLICATE_PAYMENT, result.verificationResult());
         assertEquals(PaymentTransactionStatusEnum.DUPLICATE, result.paymentStatus());
+    }
+
+    @Test
+    void shouldVerifyPendingTransactionsInBatch() {
+        PaymentTransaction firstTransaction = transaction(9L, "tx-9", null, "10.00", "usdc-mint", utc("2026-03-17T10:00:00Z"));
+        PaymentTransaction secondTransaction = transaction(10L, "tx-10", "ref-7", "10.00", "usdc-mint", utc("2026-03-17T10:01:00Z"));
+
+        when(paymentTransactionService.listPendingVerificationTransactions(20)).thenReturn(List.of(firstTransaction, secondTransaction));
+        when(invoicePaymentRequestMapper.selectOne(any())).thenReturn(paymentRequest(106L, "ref-7", "usdc-mint", "10.00", utc("2026-03-18T10:00:00Z")));
+        when(invoiceService.getById(106L)).thenReturn(invoice(106L));
+        when(paymentTransactionService.list(anyWrapper())).thenReturn(List.of());
+
+        int processedCount = paymentVerificationService.verifyPendingTransactions(20);
+
+        assertEquals(2, processedCount);
+        verify(paymentTransactionService, org.mockito.Mockito.times(2)).updateById(any(PaymentTransaction.class));
+    }
+
+    @Test
+    void shouldContinueBatchVerificationWhenSingleTransactionFails() {
+        PaymentTransaction failedTransaction = transaction(11L, "tx-11", "ref-8", "10.00", "usdc-mint", utc("2026-03-17T10:00:00Z"));
+        failedTransaction.setAmount(null);
+        PaymentTransaction successTransaction = transaction(12L, "tx-12", "ref-9", "10.00", "usdc-mint", utc("2026-03-17T10:01:00Z"));
+
+        when(paymentTransactionService.listPendingVerificationTransactions(10)).thenReturn(List.of(failedTransaction, successTransaction));
+        when(invoicePaymentRequestMapper.selectOne(any())).thenReturn(
+            paymentRequest(107L, "ref-8", "usdc-mint", "10.00", utc("2026-03-18T10:00:00Z")),
+            paymentRequest(108L, "ref-9", "usdc-mint", "10.00", utc("2026-03-18T10:00:00Z"))
+        );
+        when(invoiceService.getById(107L)).thenReturn(invoice(107L));
+        when(invoiceService.getById(108L)).thenReturn(invoice(108L));
+        when(paymentTransactionService.list(anyWrapper())).thenReturn(List.of());
+
+        int processedCount = paymentVerificationService.verifyPendingTransactions(10);
+
+        assertEquals(1, processedCount);
+        verify(paymentTransactionService).updateById(any(PaymentTransaction.class));
     }
 
     private PaymentTransaction transaction(

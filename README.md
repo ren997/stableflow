@@ -34,8 +34,10 @@ Use interface and implementation layering for services:
 ## Comment conventions
 
 - Request, response, and entity fields should have concise field comments
+- Record classes should have brief class-level comments, and record components should have concise field comments
 - Core entity classes should have brief class-level responsibility comments
 - Public service interface methods should have concise contract comments
+- Business orchestration code should have brief process comments at key steps
 - Scheduled job classes and scheduled methods should have brief purpose comments
 - Enum classes should have brief responsibility comments, and business enum items should have readable descriptions
 

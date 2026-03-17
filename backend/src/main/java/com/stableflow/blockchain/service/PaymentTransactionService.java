@@ -2,6 +2,7 @@ package com.stableflow.blockchain.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.stableflow.blockchain.entity.PaymentTransaction;
+import java.util.List;
 
 public interface PaymentTransactionService extends IService<PaymentTransaction> {
 
@@ -10,4 +11,7 @@ public interface PaymentTransactionService extends IService<PaymentTransaction> 
 
     /** Persist a transaction only when its hash has not been seen before / 仅在交易哈希未出现过时落库 */
     boolean saveIfAbsent(PaymentTransaction paymentTransaction);
+
+    /** List candidate transactions that are still waiting for verification / 查询仍处于待验证状态的候选交易 */
+    List<PaymentTransaction> listPendingVerificationTransactions(int limit);
 }

@@ -8,7 +8,8 @@ import org.springframework.context.annotation.Configuration;
     SecurityProperties.class,
     PaymentProperties.class,
     SolanaProperties.class,
-    SolanaScanProperties.class
+    SolanaScanProperties.class,
+    PaymentVerifyProperties.class
 })
 public class AppConfig {
 }

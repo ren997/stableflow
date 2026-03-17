@@ -57,3 +57,9 @@ stableflow:
       initial-delay-ms: ${SOLANA_SCAN_INITIAL_DELAY_MS:10000}
   agent:
     api-key: ${AGENT_API_KEY:replace-me}
+  verification:
+    job:
+      enabled: ${PAYMENT_VERIFY_ENABLED:true}
+      batch-size: ${PAYMENT_VERIFY_BATCH_SIZE:50}
+      fixed-delay-ms: ${PAYMENT_VERIFY_FIXED_DELAY_MS:30000}
+      initial-delay-ms: ${PAYMENT_VERIFY_INITIAL_DELAY_MS:15000}

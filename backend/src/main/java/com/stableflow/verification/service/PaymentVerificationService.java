@@ -10,4 +10,7 @@ public interface PaymentVerificationService {
 
     /** Verify a loaded candidate transaction and write back the verification result when the primary key exists / 验证已加载的候选交易，若存在主键则回写验证结果 */
     PaymentVerificationResultVo verifyTransaction(PaymentTransaction paymentTransaction);
+
+    /** Verify a batch of pending candidate transactions in scan order / 按扫描顺序批量验证待处理候选交易 */
+    int verifyPendingTransactions(int limit);
 }
