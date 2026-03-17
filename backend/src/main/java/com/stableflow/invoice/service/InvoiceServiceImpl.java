@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.stableflow.invoice.dto.CreateInvoiceRequestDto;
 import com.stableflow.invoice.entity.Invoice;
 import com.stableflow.invoice.entity.InvoicePaymentRequest;
-import com.stableflow.invoice.enums.InvoiceStatus;
+import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import com.stableflow.invoice.mapper.InvoiceMapper;
 import com.stableflow.invoice.mapper.InvoicePaymentRequestMapper;
 import com.stableflow.invoice.vo.InvoiceDetailVo;
@@ -69,7 +69,7 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
         invoice.setCurrency(normalizeOrDefault(request.currency(), DEFAULT_CURRENCY));
         invoice.setChain(normalizeOrDefault(request.chain(), DEFAULT_CHAIN));
         invoice.setDescription(request.description());
-        invoice.setStatus(InvoiceStatus.PENDING.name());
+        invoice.setStatus(InvoiceStatusEnum.PENDING.getCode());
         invoice.setExpireAt(request.expireAt());
         invoiceMapper.insert(invoice);
 

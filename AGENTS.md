@@ -4,6 +4,8 @@
 
 - Request/input parameter objects must use the `Dto` suffix.
 - Response/output view objects must use the `Vo` suffix.
+- Enum types must use the `Enum` suffix.
+- Business enum types should provide clear semantics such as `code` and `desc`, and expose getters when the enum is used in persistence, API payloads, or status mapping.
 - When adding new Java classes, prefer `Dto` for inbound data and `Vo` for outbound data consistently across modules.
 
 ## API Modeling
@@ -19,6 +21,7 @@
 - Public service interface methods and other externally consumed public methods should have concise contract comments.
 - Scheduled job classes and scheduled methods should have brief comments explaining the trigger purpose and business responsibility.
 - Interface-layer comments should explain the contract briefly, including key parameters or special behavior when it is not obvious.
+- Enum classes should have brief class-level comments, and enum items should carry readable descriptions when they represent business states or externally visible codes.
 - Keep comments short and high-signal; avoid repeating what is already obvious from the method or field name.
 
 ## Service Layer

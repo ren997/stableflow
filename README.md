@@ -24,12 +24,20 @@ Use interface and implementation layering for services:
 - Controllers and peer services should depend on the interface
 - CRUD-oriented MyBatis-Plus services should prefer `IService<Entity>` and `ServiceImpl<Mapper, Entity>`
 
+## Naming conventions
+
+- Request/input objects use the `Dto` suffix
+- Response/output objects use the `Vo` suffix
+- Enum types use the `Enum` suffix
+- Business enums should prefer `code` and `desc` fields with getters when they are used as persisted or externally visible states
+
 ## Comment conventions
 
 - Request, response, and entity fields should have concise field comments
 - Core entity classes should have brief class-level responsibility comments
 - Public service interface methods should have concise contract comments
 - Scheduled job classes and scheduled methods should have brief purpose comments
+- Enum classes should have brief responsibility comments, and business enum items should have readable descriptions
 
 ### Local setup
 

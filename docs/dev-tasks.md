@@ -312,9 +312,52 @@
 
 ## 8. M4 验证、核销与 Payment Proof
 
+### M4 技术方案补充
+
+当前代码已经完成以下基础能力：
+
+- 商家登录
+- 商家固定收款地址配置
+- Invoice 创建、列表、详情
+- payment request 生成
+- Solana 交易解析
+- 按收款地址增量扫描候选交易
+- 候选交易落库到 `payment_transaction`
+
+当前真正未闭环的部分，是“扫描到交易之后如何认账”。因此 M4 的重点不是继续扩扫描，而是完成 verification、reconciliation 与 Payment Proof。
+
+推荐按以下顺序实现：
+
+1. 先做 `T401`，把 `reference_key -> invoice_payment_request -> invoice` 的关联和验证规则落成代码
+2. 再做 `T402`，把待验证交易批量处理起来
+3. 再做 `T403`，完成核销和账单状态更新
+4. 最后做 `T404`，输出 Payment Proof 视图
+
+`T401` 第一版建议先只覆盖最小规则：
+
+- `MISSING_REFERENCE`
+- `INVALID_REFERENCE`
+- `WRONG_CURRENCY`
+- `PAID`
+- `PARTIALLY_PAID`
+- `OVERPAID`
+
+实现顺序建议：
+
+1. 用 `payment_transaction.reference_key` 命中 `invoice_payment_request`
+2. 拿到目标 `invoice`
+3. 校验 `mint_address`
+4. 比较 `amount` 与 `expected_amount`
+5. 输出统一验证结果
+
+说明：
+
+- 过期到账、重复支付、更早有效支付优先可以放在 `T401` 第一版跑通后再补
+- `T304` 依然重要，但它解决的是扫描稳定性，不是支付闭环认账问题，因此优先级低于 `T401`
+
 ### T401 支付验证规则实现
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0
 - 依赖：T303

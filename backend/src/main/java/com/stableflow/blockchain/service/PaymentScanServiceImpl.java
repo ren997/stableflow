@@ -14,6 +14,8 @@ import com.stableflow.system.config.SolanaProperties;
 import com.stableflow.system.config.SolanaScanProperties;
 import com.stableflow.system.exception.BusinessException;
 import com.stableflow.system.exception.ErrorCode;
+import com.stableflow.verification.enums.PaymentTransactionStatusEnum;
+import com.stableflow.verification.enums.PaymentVerificationResultEnum;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -25,8 +27,6 @@ import org.springframework.stereotype.Service;
 public class PaymentScanServiceImpl implements PaymentScanService {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentScanService.class);
-    private static final String PAYMENT_STATUS_DETECTED = "DETECTED";
-    private static final String VERIFICATION_RESULT_PENDING = "PENDING";
     private static final String DEFAULT_CURRENCY_USDC = "USDC";
     private static final String DEFAULT_CURRENCY_UNKNOWN = "UNKNOWN";
 
@@ -152,8 +152,8 @@ public class PaymentScanServiceImpl implements PaymentScanService {
         paymentTransaction.setCurrency(resolveCurrency(transactionDetail.getMintAddress()));
         paymentTransaction.setMintAddress(transactionDetail.getMintAddress());
         paymentTransaction.setBlockTime(transactionDetail.getBlockTime());
-        paymentTransaction.setVerificationResult(VERIFICATION_RESULT_PENDING);
-        paymentTransaction.setPaymentStatus(PAYMENT_STATUS_DETECTED);
+        paymentTransaction.setVerificationResult(PaymentVerificationResultEnum.PENDING.getCode());
+        paymentTransaction.setPaymentStatus(PaymentTransactionStatusEnum.DETECTED.getCode());
         paymentTransaction.setRawPayload(parseRawPayload(transactionDetail.getRawPayload()));
         return paymentTransaction;
     }
@@ -162,7 +162,7 @@ public class PaymentScanServiceImpl implements PaymentScanService {
         if (mintAddress == null || mintAddress.isBlank()) {
             return DEFAULT_CURRENCY_UNKNOWN;
         }
-        // MVP 阶段只把配置里的 USDC mint 识别成 USDC，其它资产先统一记为  UNKNOWN。
+        // MVP 阶段只把配置里的 USDC mint 识别成 USDC，其它资产先统一记为 UNKNOWN。
         return mintAddress.equals(solanaProperties.usdcMintAddress()) ? DEFAULT_CURRENCY_USDC : DEFAULT_CURRENCY_UNKNOWN;
     }
 
