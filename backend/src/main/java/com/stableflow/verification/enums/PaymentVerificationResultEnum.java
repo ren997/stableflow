@@ -1,5 +1,7 @@
 package com.stableflow.verification.enums;
 
+import com.baomidou.mybatisplus.annotation.EnumValue;
+import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -28,10 +30,15 @@ public enum PaymentVerificationResultEnum {
     /** A prior effective transaction already exists / 已存在更早的有效支付 */
     DUPLICATE_PAYMENT("DUPLICATE_PAYMENT", "重复支付");
 
+    public static final String DESC =
+        "支付验证结果: PENDING-待验证, MISSING_REFERENCE-缺少 reference, INVALID_REFERENCE-reference 无效, WRONG_CURRENCY-币种错误, PAID-已支付, PARTIALLY_PAID-部分支付, OVERPAID-超额支付, LATE_PAYMENT-过期到账, DUPLICATE_PAYMENT-重复支付";
+
     private static final Map<String, PaymentVerificationResultEnum> CODE_MAP = Stream.of(values())
         .collect(Collectors.toMap(PaymentVerificationResultEnum::getCode, Function.identity()));
 
     /** Persisted verification result code / 持久化验证结果编码 */
+    @EnumValue
+    @JsonValue
     private final String code;
 
     /** Human-readable verification description / 可读验证结果说明 */

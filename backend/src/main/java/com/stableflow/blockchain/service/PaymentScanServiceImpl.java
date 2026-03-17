@@ -152,8 +152,8 @@ public class PaymentScanServiceImpl implements PaymentScanService {
         paymentTransaction.setCurrency(resolveCurrency(transactionDetail.getMintAddress()));
         paymentTransaction.setMintAddress(transactionDetail.getMintAddress());
         paymentTransaction.setBlockTime(transactionDetail.getBlockTime());
-        paymentTransaction.setVerificationResult(PaymentVerificationResultEnum.PENDING.getCode());
-        paymentTransaction.setPaymentStatus(PaymentTransactionStatusEnum.DETECTED.getCode());
+        paymentTransaction.setVerificationResult(PaymentVerificationResultEnum.PENDING);
+        paymentTransaction.setPaymentStatus(PaymentTransactionStatusEnum.DETECTED);
         paymentTransaction.setRawPayload(parseRawPayload(transactionDetail.getRawPayload()));
         return paymentTransaction;
     }

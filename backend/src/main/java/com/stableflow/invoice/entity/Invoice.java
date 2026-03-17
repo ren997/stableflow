@@ -3,6 +3,7 @@ package com.stableflow.invoice.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import lombok.Data;
@@ -41,7 +42,7 @@ public class Invoice {
     private String description;
 
     /** Current invoice status / 当前账单状态 */
-    private String status;
+    private InvoiceStatusEnum status;
 
     /** Serialized exception tags / 序列化后的异常标签 */
     private String exceptionTags;

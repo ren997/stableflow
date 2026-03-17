@@ -69,7 +69,7 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
         invoice.setCurrency(normalizeOrDefault(request.currency(), DEFAULT_CURRENCY));
         invoice.setChain(normalizeOrDefault(request.chain(), DEFAULT_CHAIN));
         invoice.setDescription(request.description());
-        invoice.setStatus(InvoiceStatusEnum.PENDING.getCode());
+        invoice.setStatus(InvoiceStatusEnum.PENDING);
         invoice.setExpireAt(request.expireAt());
         invoiceMapper.insert(invoice);
 
@@ -95,7 +95,11 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
             .eq(Invoice::getMerchantId, merchantId)
             .orderByDesc(Invoice::getCreatedAt);
         if (status != null && !status.isBlank()) {
-            wrapper.eq(Invoice::getStatus, status.toUpperCase(Locale.ROOT));
+            InvoiceStatusEnum statusEnum = InvoiceStatusEnum.fromCode(status.toUpperCase(Locale.ROOT));
+            if (statusEnum == null) {
+                throw new BusinessException(ErrorCode.INVALID_REQUEST, "Unsupported invoice status: " + status);
+            }
+            wrapper.eq(Invoice::getStatus, statusEnum);
         }
         return invoiceMapper.selectList(wrapper).stream().map(this::toListItemResponse).toList();
     }

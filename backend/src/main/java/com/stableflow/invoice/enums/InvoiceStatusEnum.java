@@ -1,5 +1,7 @@
 package com.stableflow.invoice.enums;
 
+import com.baomidou.mybatisplus.annotation.EnumValue;
+import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -24,10 +26,15 @@ public enum InvoiceStatusEnum {
     /** Invoice with reconciliation failure / 核销失败账单 */
     FAILED_RECONCILIATION("FAILED_RECONCILIATION", "核销失败");
 
+    public static final String DESC =
+        "账单状态: DRAFT-草稿, PENDING-待支付, PAID-已支付, PARTIALLY_PAID-部分支付, OVERPAID-超额支付, EXPIRED-已过期, FAILED_RECONCILIATION-核销失败";
+
     private static final Map<String, InvoiceStatusEnum> CODE_MAP = Stream.of(values())
         .collect(Collectors.toMap(InvoiceStatusEnum::getCode, Function.identity()));
 
     /** Persisted status code / 持久化状态编码 */
+    @EnumValue
+    @JsonValue
     private final String code;
 
     /** Human-readable status description / 可读状态说明 */

@@ -1,5 +1,6 @@
 package com.stableflow.invoice.vo;
 
+import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -18,8 +19,8 @@ public record InvoiceListItemVo(
     BigDecimal amount,
     @Schema(description = "Currency code / 币种代码", example = "USDC")
     String currency,
-    @Schema(description = "Invoice status / 账单状态", example = "PENDING")
-    String status,
+    @Schema(description = "Invoice status / 账单状态", implementation = InvoiceStatusEnum.class)
+    InvoiceStatusEnum status,
     @Schema(description = "Invoice expiry time in UTC / 账单过期时间（UTC）")
     OffsetDateTime expireAt,
     @Schema(description = "Created time in UTC / 创建时间（UTC）")

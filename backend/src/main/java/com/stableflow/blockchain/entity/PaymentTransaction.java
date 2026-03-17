@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.stableflow.verification.enums.PaymentTransactionStatusEnum;
+import com.stableflow.verification.enums.PaymentVerificationResultEnum;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import lombok.Data;
@@ -47,10 +49,10 @@ public class PaymentTransaction {
     private OffsetDateTime blockTime;
 
     /** Verification result status / 验证结果状态 */
-    private String verificationResult;
+    private PaymentVerificationResultEnum verificationResult;
 
     /** Derived payment status / 派生支付状态 */
-    private String paymentStatus;
+    private PaymentTransactionStatusEnum paymentStatus;
 
     /** Raw blockchain payload stored as JSON / 以 JSON 形式保存的原始链上载荷 */
     @TableField(typeHandler = JacksonTypeHandler.class)

@@ -1,5 +1,7 @@
 package com.stableflow.verification.vo;
 
+import com.stableflow.verification.enums.PaymentTransactionStatusEnum;
+import com.stableflow.verification.enums.PaymentVerificationResultEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(name = "PaymentVerificationResultVo", description = "Payment verification result / 支付验证结果")
@@ -12,10 +14,10 @@ public record PaymentVerificationResultVo(
     String txHash,
     @Schema(description = "Parsed reference key / 解析出的 reference 标识", example = "ref_1234567890abcdef")
     String referenceKey,
-    @Schema(description = "Verification result code / 验证结果代码", example = "PAID")
-    String verificationResult,
-    @Schema(description = "Derived payment status / 派生支付状态", example = "PAID")
-    String paymentStatus,
+    @Schema(description = "Verification result / 验证结果", implementation = PaymentVerificationResultEnum.class)
+    PaymentVerificationResultEnum verificationResult,
+    @Schema(description = "Derived payment status / 派生支付状态", implementation = PaymentTransactionStatusEnum.class)
+    PaymentTransactionStatusEnum paymentStatus,
     @Schema(description = "Verification message / 验证说明", example = "Matched invoice payment successfully.")
     String message
 ) {

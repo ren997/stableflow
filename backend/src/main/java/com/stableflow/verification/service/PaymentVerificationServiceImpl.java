@@ -22,11 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PaymentVerificationServiceImpl implements PaymentVerificationService {
 
-    private static final Set<String> EFFECTIVE_VERIFICATION_RESULTS = Set.of(
-        PaymentVerificationResultEnum.PAID.getCode(),
-        PaymentVerificationResultEnum.PARTIALLY_PAID.getCode(),
-        PaymentVerificationResultEnum.OVERPAID.getCode(),
-        PaymentVerificationResultEnum.LATE_PAYMENT.getCode()
+    private static final Set<PaymentVerificationResultEnum> EFFECTIVE_VERIFICATION_RESULTS = Set.of(
+        PaymentVerificationResultEnum.PAID,
+        PaymentVerificationResultEnum.PARTIALLY_PAID,
+        PaymentVerificationResultEnum.OVERPAID,
+        PaymentVerificationResultEnum.LATE_PAYMENT
     );
 
     private final PaymentTransactionService paymentTransactionService;
@@ -46,6 +46,7 @@ public class PaymentVerificationServiceImpl implements PaymentVerificationServic
     @Transactional
     @Override
     public PaymentVerificationResultVo verifyTransaction(Long paymentTransactionId) {
+        // 先按主键取出候选交易，供后续按统一规则执行验证。
         PaymentTransaction paymentTransaction = paymentTransactionService.getById(paymentTransactionId);
         if (paymentTransaction == null) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "Payment transaction not found");
@@ -60,6 +61,7 @@ public class PaymentVerificationServiceImpl implements PaymentVerificationServic
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "Payment transaction is required");
         }
 
+        // 先得出验证结论，再把结论回写到 payment_transaction。
         VerificationDecision decision = decideVerification(paymentTransaction);
         applyDecision(paymentTransaction, decision);
         return new PaymentVerificationResultVo(
@@ -67,13 +69,14 @@ public class PaymentVerificationServiceImpl implements PaymentVerificationServic
             decision.invoiceId(),
             paymentTransaction.getTxHash(),
             paymentTransaction.getReferenceKey(),
-            decision.verificationResult().getCode(),
-            decision.paymentStatus().getCode(),
+            decision.verificationResult(),
+            decision.paymentStatus(),
             decision.message()
         );
     }
 
     private VerificationDecision decideVerification(PaymentTransaction paymentTransaction) {
+        // 第一步先看链上交易里有没有可用 reference，没有就无法继续认账。
         if (paymentTransaction.getReferenceKey() == null || paymentTransaction.getReferenceKey().isBlank()) {
             return new VerificationDecision(
                 null,
@@ -83,6 +86,7 @@ public class PaymentVerificationServiceImpl implements PaymentVerificationServic
             );
         }
 
+        // 第二步通过 reference_key 命中支付请求，这是交易和账单之间的第一层关联。
         InvoicePaymentRequest paymentRequest = invoicePaymentRequestMapper.selectOne(
             new LambdaQueryWrapper<InvoicePaymentRequest>()
                 .eq(InvoicePaymentRequest::getReferenceKey, paymentTransaction.getReferenceKey())
@@ -96,6 +100,7 @@ public class PaymentVerificationServiceImpl implements PaymentVerificationServic
             );
         }
 
+        // 第三步再从支付请求拿到目标 invoice，形成 reference -> payment request -> invoice 的完整链路。
         Invoice invoice = invoiceService.getById(paymentRequest.getInvoiceId());
         if (invoice == null) {
             return new VerificationDecision(
@@ -106,6 +111,7 @@ public class PaymentVerificationServiceImpl implements PaymentVerificationServic
             );
         }
 
+        // 先校验币种，避免错误资产直接进入金额判断。
         if (!matchesMintAddress(paymentTransaction, paymentRequest)) {
             return new VerificationDecision(
                 invoice.getId(),
@@ -115,6 +121,7 @@ public class PaymentVerificationServiceImpl implements PaymentVerificationServic
             );
         }
 
+        // 再校验支付时间窗口，过期到账先单独标记，不和正常支付结果混在一起。
         if (isLatePayment(paymentTransaction, paymentRequest)) {
             return new VerificationDecision(
                 invoice.getId(),
@@ -124,6 +131,7 @@ public class PaymentVerificationServiceImpl implements PaymentVerificationServic
             );
         }
 
+        // 如果这个账单已经有更早的有效支付，就把当前交易判成重复支付。
         if (hasEarlierEffectivePayment(invoice.getId(), paymentTransaction)) {
             return new VerificationDecision(
                 invoice.getId(),
@@ -133,6 +141,7 @@ public class PaymentVerificationServiceImpl implements PaymentVerificationServic
             );
         }
 
+        // 前面的基础校验都通过后，再进入金额比较，决定是足额、少付还是多付。
         return decideAmountBasedResult(paymentTransaction, paymentRequest, invoice.getId());
     }
 
@@ -169,19 +178,21 @@ public class PaymentVerificationServiceImpl implements PaymentVerificationServic
     }
 
     private void applyDecision(PaymentTransaction paymentTransaction, VerificationDecision decision) {
+        // 先更新内存对象，保证调用方能立即拿到最新验证结果。
         paymentTransaction.setInvoiceId(decision.invoiceId());
-        paymentTransaction.setVerificationResult(decision.verificationResult().getCode());
-        paymentTransaction.setPaymentStatus(decision.paymentStatus().getCode());
+        paymentTransaction.setVerificationResult(decision.verificationResult());
+        paymentTransaction.setPaymentStatus(decision.paymentStatus());
 
         if (paymentTransaction.getId() == null) {
             return;
         }
 
+        // 再把最关键的认账结果落回数据库，供后续 T402/T403 批量处理与核销复用。
         PaymentTransaction update = new PaymentTransaction();
         update.setId(paymentTransaction.getId());
         update.setInvoiceId(decision.invoiceId());
-        update.setVerificationResult(decision.verificationResult().getCode());
-        update.setPaymentStatus(decision.paymentStatus().getCode());
+        update.setVerificationResult(decision.verificationResult());
+        update.setPaymentStatus(decision.paymentStatus());
         paymentTransactionService.updateById(update);
     }
 
@@ -201,6 +212,7 @@ public class PaymentVerificationServiceImpl implements PaymentVerificationServic
     }
 
     private boolean hasEarlierEffectivePayment(Long invoiceId, PaymentTransaction paymentTransaction) {
+        // 只看已经判定为有效支付的历史交易，避免把未验证或异常交易当成重复支付依据。
         List<PaymentTransaction> effectiveTransactions = paymentTransactionService.list(
             new LambdaQueryWrapper<PaymentTransaction>()
                 .eq(PaymentTransaction::getInvoiceId, invoiceId)
@@ -212,6 +224,7 @@ public class PaymentVerificationServiceImpl implements PaymentVerificationServic
     }
 
     private boolean isEarlierTransaction(PaymentTransaction existingTransaction, PaymentTransaction currentTransaction) {
+        // 优先按 blockTime 判断先后；如果链上时间缺失，再退化到主键顺序兜底。
         OffsetDateTime existingBlockTime = existingTransaction.getBlockTime();
         OffsetDateTime currentBlockTime = currentTransaction.getBlockTime();
 
@@ -242,9 +255,13 @@ public class PaymentVerificationServiceImpl implements PaymentVerificationServic
     }
 
     private record VerificationDecision(
+        /** Matched invoice id after reference-based association / 基于 reference 关联后的账单 ID */
         Long invoiceId,
+        /** Final verification result code for the transaction / 交易最终验证结果 */
         PaymentVerificationResultEnum verificationResult,
+        /** Derived payment status used by downstream processing / 供后续流程使用的派生支付状态 */
         PaymentTransactionStatusEnum paymentStatus,
+        /** Human-readable verification message / 可读验证说明 */
         String message
     ) {
     }

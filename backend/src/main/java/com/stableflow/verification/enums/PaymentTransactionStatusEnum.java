@@ -1,5 +1,7 @@
 package com.stableflow.verification.enums;
 
+import com.baomidou.mybatisplus.annotation.EnumValue;
+import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -24,10 +26,15 @@ public enum PaymentTransactionStatusEnum {
     /** Transaction is treated as a duplicate payment / 交易被识别为重复支付 */
     DUPLICATE("DUPLICATE", "重复支付");
 
+    public static final String DESC =
+        "支付交易状态: DETECTED-已发现, UNMATCHED-未匹配, PAID-已支付, PARTIALLY_PAID-部分支付, OVERPAID-超额支付, EXPIRED-已过期, DUPLICATE-重复支付";
+
     private static final Map<String, PaymentTransactionStatusEnum> CODE_MAP = Stream.of(values())
         .collect(Collectors.toMap(PaymentTransactionStatusEnum::getCode, Function.identity()));
 
     /** Persisted payment status code / 持久化支付状态编码 */
+    @EnumValue
+    @JsonValue
     private final String code;
 
     /** Human-readable payment status description / 可读支付状态说明 */
