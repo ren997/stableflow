@@ -63,3 +63,9 @@ stableflow:
       batch-size: ${PAYMENT_VERIFY_BATCH_SIZE:50}
       fixed-delay-ms: ${PAYMENT_VERIFY_FIXED_DELAY_MS:30000}
       initial-delay-ms: ${PAYMENT_VERIFY_INITIAL_DELAY_MS:15000}
+  reconciliation:
+    job:
+      enabled: ${RECONCILIATION_JOB_ENABLED:true}
+      batch-size: ${RECONCILIATION_JOB_BATCH_SIZE:50}
+      fixed-delay-ms: ${RECONCILIATION_JOB_FIXED_DELAY_MS:30000}
+      initial-delay-ms: ${RECONCILIATION_JOB_INITIAL_DELAY_MS:20000}

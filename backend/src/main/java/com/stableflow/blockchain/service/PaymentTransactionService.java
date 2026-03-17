@@ -14,4 +14,7 @@ public interface PaymentTransactionService extends IService<PaymentTransaction> 
 
     /** List candidate transactions that are still waiting for verification / 查询仍处于待验证状态的候选交易 */
     List<PaymentTransaction> listPendingVerificationTransactions(int limit);
+
+    /** List verified transactions that still have not been consumed by reconciliation / 查询已验证但尚未被核销消费的交易 */
+    List<PaymentTransaction> listPendingReconciliationTransactions(int limit);
 }
