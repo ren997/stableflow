@@ -7,6 +7,8 @@ import com.stableflow.invoice.service.InvoiceService;
 import com.stableflow.invoice.vo.InvoiceDetailVo;
 import com.stableflow.invoice.vo.InvoiceListItemVo;
 import com.stableflow.invoice.vo.PaymentInfoVo;
+import com.stableflow.reconciliation.service.PaymentProofService;
+import com.stableflow.reconciliation.vo.PaymentProofVo;
 import com.stableflow.system.api.ApiResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -24,9 +26,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class InvoiceController {
 
     private final InvoiceService invoiceService;
+    private final PaymentProofService paymentProofService;
 
-    public InvoiceController(InvoiceService invoiceService) {
+    public InvoiceController(InvoiceService invoiceService, PaymentProofService paymentProofService) {
         this.invoiceService = invoiceService;
+        this.paymentProofService = paymentProofService;
     }
 
     @PostMapping
@@ -51,5 +55,11 @@ public class InvoiceController {
     @Operation(summary = "Get invoice payment info / 获取账单支付信息")
     public ApiResponse<PaymentInfoVo> getPaymentInfo(@PathVariable("id") Long id) {
         return ApiResponse.success(invoiceService.getPaymentInfo(id));
+    }
+
+    @GetMapping("/{id}/payment-proof")
+    @Operation(summary = "Get invoice payment proof / 获取账单支付凭证")
+    public ApiResponse<PaymentProofVo> getPaymentProof(@PathVariable("id") Long id) {
+        return ApiResponse.success(paymentProofService.getLatestProof(id));
     }
 }

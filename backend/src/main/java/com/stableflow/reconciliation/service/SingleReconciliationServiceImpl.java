@@ -24,15 +24,18 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
 
     private final InvoiceService invoiceService;
     private final ReconciliationRecordService reconciliationRecordService;
+    private final PaymentProofService paymentProofService;
     private final ObjectMapper objectMapper;
 
     public SingleReconciliationServiceImpl(
         InvoiceService invoiceService,
         ReconciliationRecordService reconciliationRecordService,
+        PaymentProofService paymentProofService,
         ObjectMapper objectMapper
     ) {
         this.invoiceService = invoiceService;
         this.reconciliationRecordService = reconciliationRecordService;
+        this.paymentProofService = paymentProofService;
         this.objectMapper = objectMapper;
     }
 
@@ -52,8 +55,18 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
         }
 
         ReconciliationDecision decision = decideReconciliation(paymentTransaction, invoice);
-        applyInvoiceUpdate(invoice, paymentTransaction, decision);
-        reconciliationRecordService.saveIfAbsent(toReconciliationRecord(paymentTransaction, decision));
+        InvoiceSnapshot invoiceSnapshot = buildInvoiceSnapshot(invoice, paymentTransaction, decision);
+        applyInvoiceUpdate(invoice.getId(), invoiceSnapshot);
+        ReconciliationRecord reconciliationRecord = toReconciliationRecord(paymentTransaction, decision);
+        reconciliationRecordService.saveIfAbsent(reconciliationRecord);
+        paymentProofService.saveIfAbsent(
+            invoice,
+            paymentTransaction,
+            reconciliationRecord,
+            invoiceSnapshot.status(),
+            invoiceSnapshot.exceptionTags(),
+            invoiceSnapshot.paidAt()
+        );
         return true;
     }
 
@@ -110,12 +123,24 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
         };
     }
 
-    private void applyInvoiceUpdate(Invoice invoice, PaymentTransaction paymentTransaction, ReconciliationDecision decision) {
+    private InvoiceSnapshot buildInvoiceSnapshot(
+        Invoice invoice,
+        PaymentTransaction paymentTransaction,
+        ReconciliationDecision decision
+    ) {
+        return new InvoiceSnapshot(
+            decision.invoiceStatus(),
+            mergeExceptionTags(invoice.getExceptionTags(), decision.exceptionTags()),
+            resolvePaidAt(invoice.getPaidAt(), paymentTransaction.getBlockTime(), decision.invoiceStatus())
+        );
+    }
+
+    private void applyInvoiceUpdate(Long invoiceId, InvoiceSnapshot invoiceSnapshot) {
         Invoice update = new Invoice();
-        update.setId(invoice.getId());
-        update.setStatus(decision.invoiceStatus());
-        update.setExceptionTags(mergeExceptionTags(invoice.getExceptionTags(), decision.exceptionTags()));
-        update.setPaidAt(resolvePaidAt(invoice.getPaidAt(), paymentTransaction.getBlockTime(), decision.invoiceStatus()));
+        update.setId(invoiceId);
+        update.setStatus(invoiceSnapshot.status());
+        update.setExceptionTags(invoiceSnapshot.exceptionTags());
+        update.setPaidAt(invoiceSnapshot.paidAt());
         invoiceService.updateById(update);
     }
 
@@ -183,6 +208,16 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
         List<String> exceptionTags,
         /** Human-readable reconciliation message / 可读核销说明 */
         String message
+    ) {
+    }
+
+    private record InvoiceSnapshot(
+        /** Final invoice status after reconciliation / 核销后的最终账单状态 */
+        InvoiceStatusEnum status,
+        /** Final serialized exception tags / 最终序列化异常标签 */
+        String exceptionTags,
+        /** Final paid time in UTC / 最终支付时间（UTC） */
+        OffsetDateTime paidAt
     ) {
     }
 }

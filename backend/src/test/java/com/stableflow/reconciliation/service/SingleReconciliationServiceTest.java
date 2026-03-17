@@ -31,6 +31,9 @@ class SingleReconciliationServiceTest {
     @Mock
     private ReconciliationRecordService reconciliationRecordService;
 
+    @Mock
+    private PaymentProofService paymentProofService;
+
     private SingleReconciliationService singleReconciliationService;
 
     @BeforeEach
@@ -38,6 +41,7 @@ class SingleReconciliationServiceTest {
         singleReconciliationService = new SingleReconciliationServiceImpl(
             invoiceService,
             reconciliationRecordService,
+            paymentProofService,
             new ObjectMapper()
         );
     }
@@ -63,6 +67,7 @@ class SingleReconciliationServiceTest {
         verify(reconciliationRecordService).saveIfAbsent(recordCaptor.capture());
         assertEquals(ReconciliationStatusEnum.SUCCESS, recordCaptor.getValue().getReconciliationStatus());
         assertEquals("Invoice marked as paid.", recordCaptor.getValue().getResultMessage());
+        verify(paymentProofService).saveIfAbsent(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -85,6 +90,7 @@ class SingleReconciliationServiceTest {
         ArgumentCaptor<ReconciliationRecord> recordCaptor = ArgumentCaptor.forClass(ReconciliationRecord.class);
         verify(reconciliationRecordService).saveIfAbsent(recordCaptor.capture());
         assertEquals(ReconciliationStatusEnum.SKIPPED, recordCaptor.getValue().getReconciliationStatus());
+        verify(paymentProofService).saveIfAbsent(any(), any(), any(), any(), any(), any());
     }
 
     @Test

@@ -6,6 +6,7 @@ public enum ErrorCode {
     MERCHANT_NOT_FOUND(40401, "Merchant not found"),
     PAYMENT_CONFIG_NOT_FOUND(40402, "Merchant payment config not found"),
     INVOICE_NOT_FOUND(40403, "Invoice not found"),
+    PAYMENT_PROOF_NOT_FOUND(40404, "Payment proof not found"),
     INVALID_CREDENTIALS(40001, "Invalid credentials"),
     INVALID_REQUEST(40002, "Invalid request"),
     BLOCKCHAIN_RPC_TIMEOUT(50010, "Blockchain RPC timeout"),

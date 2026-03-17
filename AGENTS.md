@@ -1,5 +1,54 @@
 # Repository Conventions
 
+## Project Overview
+
+- StableFlow is a Solana stablecoin billing, payment verification, and reconciliation infrastructure project for global digital merchants.
+- The MVP core flow is: merchant login -> configure fixed receiving address -> create invoice -> generate payment request -> scan on-chain transactions -> verify payment -> reconcile invoice -> generate payment proof -> show dashboard summary.
+- The current product strategy is `fixed address + reference`. Do not redesign the main attribution model unless the user explicitly asks for it.
+- Agent capability is an enhancement layer. It should be built on top of verified invoice and payment facts, not used as the source of payment truth.
+
+## Repository Layout
+
+- `docs/`: product, architecture, implementation, and execution documents. This is the main context source for new threads.
+- `backend/`: Spring Boot backend, currently the main implementation area.
+- `frontend/`: React + Vite frontend, currently still relatively early and should follow backend capability delivery.
+
+## How To Read The Docs
+
+When starting a new thread, read the docs in this order unless the user asks for something very specific:
+
+1. `docs/requirements.md`
+   Understand product goals, MVP scope, core user scenarios, and business rules.
+2. `docs/technical-design.md`
+   Understand architecture, module boundaries, payment flow, verification rules, and data model.
+3. `docs/implementation-guide.md`
+   Understand the recommended package structure, migration strategy, API skeleton, and delivery approach.
+4. `docs/dev-tasks.md`
+   Use this as the execution board for what is done, what is pending, and what should be built next.
+
+## What `docs/dev-tasks.md` Means
+
+- `docs/dev-tasks.md` is the main development task board for the MVP.
+- It translates product/design documents into executable milestones such as `M0` to `M7` and concrete tasks such as `T101`, `T203`, `T404`.
+- Each task includes status, dependency, deliverables, and completion criteria.
+- When the user asks "what should we do next", prefer checking `docs/dev-tasks.md` first instead of guessing from README text.
+- Treat task status in `docs/dev-tasks.md` as the primary planning reference, and then verify against actual code when needed.
+
+## New Thread Quick Start
+
+For a fresh thread, use this workflow:
+
+1. Read `docs/dev-tasks.md` to locate the current stage and pending tasks.
+2. Read the related section in `docs/technical-design.md` for the business flow and design constraints.
+3. Open the corresponding backend or frontend module to verify whether the task is already implemented.
+4. Prefer continuing the current MVP mainline before jumping to P1 or speculative refactors.
+
+## Current Delivery Heuristics
+
+- Prioritize the MVP payment closure over extensions: payment proof, payment status, dashboard, public payment page, expiration handling, and job stability are typically more important than Agent features at this stage.
+- Prefer backend completion of the main payment workflow before doing broad frontend polish.
+- If README files conflict with code or `docs/dev-tasks.md`, trust the code and `docs/dev-tasks.md` first because some README notes may lag behind implementation progress.
+
 ## Naming
 
 - Request/input parameter objects must use the `Dto` suffix.
