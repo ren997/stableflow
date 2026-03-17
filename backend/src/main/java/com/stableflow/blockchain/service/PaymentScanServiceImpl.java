@@ -162,7 +162,7 @@ public class PaymentScanServiceImpl implements PaymentScanService {
         if (mintAddress == null || mintAddress.isBlank()) {
             return DEFAULT_CURRENCY_UNKNOWN;
         }
-        // MVP 阶段只把配置里的 USDC mint 识别成 USDC，其它资产先统一记为 UNKNOWN。
+        // MVP 阶段只把配置里的 USDC mint 识别成 USDC，其它资产先统一记为  UNKNOWN。
         return mintAddress.equals(solanaProperties.usdcMintAddress()) ? DEFAULT_CURRENCY_USDC : DEFAULT_CURRENCY_UNKNOWN;
     }
 
