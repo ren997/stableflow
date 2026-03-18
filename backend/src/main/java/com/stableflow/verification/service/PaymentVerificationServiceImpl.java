@@ -3,25 +3,19 @@ package com.stableflow.verification.service;
 import com.stableflow.blockchain.entity.PaymentTransaction;
 import com.stableflow.blockchain.service.PaymentTransactionService;
 import com.stableflow.verification.vo.PaymentVerificationResultVo;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class PaymentVerificationServiceImpl implements PaymentVerificationService {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentVerificationServiceImpl.class);
 
     private final PaymentTransactionService paymentTransactionService;
     private final SinglePaymentVerificationService singlePaymentVerificationService;
-
-    public PaymentVerificationServiceImpl(
-        PaymentTransactionService paymentTransactionService,
-        SinglePaymentVerificationService singlePaymentVerificationService
-    ) {
-        this.paymentTransactionService = paymentTransactionService;
-        this.singlePaymentVerificationService = singlePaymentVerificationService;
-    }
 
     @Override
     public int verifyPendingTransactions(int limit) {

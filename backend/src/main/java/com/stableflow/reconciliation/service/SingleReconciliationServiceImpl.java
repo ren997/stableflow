@@ -15,11 +15,13 @@ import java.time.OffsetDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Transactional single-reconciliation service / 负责单笔已验证交易事务核销的服务 */
 @Service
+@RequiredArgsConstructor
 public class SingleReconciliationServiceImpl implements SingleReconciliationService {
 
     private final InvoiceService invoiceService;
@@ -27,21 +29,11 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
     private final PaymentProofService paymentProofService;
     private final ObjectMapper objectMapper;
 
-    public SingleReconciliationServiceImpl(
-        InvoiceService invoiceService,
-        ReconciliationRecordService reconciliationRecordService,
-        PaymentProofService paymentProofService,
-        ObjectMapper objectMapper
-    ) {
-        this.invoiceService = invoiceService;
-        this.reconciliationRecordService = reconciliationRecordService;
-        this.paymentProofService = paymentProofService;
-        this.objectMapper = objectMapper;
-    }
-
+    /** Reconcile one verified transaction into invoice state, reconciliation record, and payment proof / 将一笔已验证交易核销到账单状态、核销记录与支付凭证 */
     @Transactional
     @Override
     public boolean reconcileTransaction(PaymentTransaction paymentTransaction) {
+        // 第一步先做幂等前置检查，缺少 invoice 归属或已处理过的交易直接跳过。
         if (paymentTransaction == null || paymentTransaction.getInvoiceId() == null) {
             return false;
         }
@@ -49,16 +41,24 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
             return false;
         }
 
+        // 第二步加载目标账单，后续状态流转和异常标签都基于当前账单快照计算。
         Invoice invoice = invoiceService.getById(paymentTransaction.getInvoiceId());
         if (invoice == null) {
             throw new BusinessException(ErrorCode.INVOICE_NOT_FOUND, "Invoice not found for reconciliation");
         }
 
+        // 第三步根据验证结果生成核销决策，明确账单状态、异常标签和核销说明。
         ReconciliationDecision decision = decideReconciliation(paymentTransaction, invoice);
+
+        // 第四步计算账单更新快照，并先落库账单状态，确保后续凭证读取到的是最新业务结果。
         InvoiceSnapshot invoiceSnapshot = buildInvoiceSnapshot(invoice, paymentTransaction, decision);
         applyInvoiceUpdate(invoice.getId(), invoiceSnapshot);
+
+        // 第五步沉淀核销记录，保留这笔交易为什么被认账或跳过的处理痕迹。
         ReconciliationRecord reconciliationRecord = toReconciliationRecord(paymentTransaction, decision);
         reconciliationRecordService.saveIfAbsent(reconciliationRecord);
+
+        // 第六步生成支付凭证快照，对外提供可查询的支付结果证据视图。
         paymentProofService.saveIfAbsent(
             invoice,
             paymentTransaction,
@@ -71,11 +71,13 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
     }
 
     private ReconciliationDecision decideReconciliation(PaymentTransaction paymentTransaction, Invoice invoice) {
+        // 核销层只消费已完成验证的交易，不接受仍处于待验证状态的数据。
         PaymentVerificationResultEnum verificationResult = paymentTransaction.getVerificationResult();
         if (verificationResult == null) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "Verification result is required before reconciliation");
         }
 
+        // 把验证结论映射为核销动作，决定是否更新账单、是否补异常标签，以及最终说明文案。
         return switch (verificationResult) {
             case PAID -> new ReconciliationDecision(
                 ReconciliationStatusEnum.SUCCESS,
@@ -128,6 +130,7 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
         PaymentTransaction paymentTransaction,
         ReconciliationDecision decision
     ) {
+        // 把目标状态、异常标签和 paidAt 一次性算清楚，避免分散更新时遗漏字段。
         return new InvoiceSnapshot(
             decision.invoiceStatus(),
             mergeExceptionTags(invoice.getExceptionTags(), decision.exceptionTags()),
@@ -136,6 +139,7 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
     }
 
     private void applyInvoiceUpdate(Long invoiceId, InvoiceSnapshot invoiceSnapshot) {
+        // 只更新核销需要变动的字段，避免覆盖账单上的无关信息。
         Invoice update = new Invoice();
         update.setId(invoiceId);
         update.setStatus(invoiceSnapshot.status());
@@ -149,6 +153,7 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
         OffsetDateTime transactionBlockTime,
         InvoiceStatusEnum invoiceStatus
     ) {
+        // paidAt 仅在有效支付结果下更新，并保留更早的有效支付时间作为最终支付时间。
         if (invoiceStatus == InvoiceStatusEnum.PAID
             || invoiceStatus == InvoiceStatusEnum.PARTIALLY_PAID
             || invoiceStatus == InvoiceStatusEnum.OVERPAID) {
@@ -167,6 +172,7 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
         PaymentTransaction paymentTransaction,
         ReconciliationDecision decision
     ) {
+        // 核销记录保存的是处理结论，而不是完整账单快照，方便后续审计和排障。
         ReconciliationRecord reconciliationRecord = new ReconciliationRecord();
         reconciliationRecord.setInvoiceId(paymentTransaction.getInvoiceId());
         reconciliationRecord.setTxHash(paymentTransaction.getTxHash());
@@ -185,6 +191,7 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
     }
 
     private String mergeExceptionTags(String existingTags, List<String> newTags) {
+        // 保持异常标签去重且追加式合并，避免后一次核销把已有异常信息冲掉。
         Set<String> mergedTags = new LinkedHashSet<>();
         if (existingTags != null && !existingTags.isBlank()) {
             for (String tag : existingTags.split(",")) {

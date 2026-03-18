@@ -2,25 +2,19 @@ package com.stableflow.reconciliation.service;
 
 import com.stableflow.blockchain.entity.PaymentTransaction;
 import com.stableflow.blockchain.service.PaymentTransactionService;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class ReconciliationServiceImpl implements ReconciliationService {
 
     private static final Logger log = LoggerFactory.getLogger(ReconciliationServiceImpl.class);
 
     private final PaymentTransactionService paymentTransactionService;
     private final SingleReconciliationService singleReconciliationService;
-
-    public ReconciliationServiceImpl(
-        PaymentTransactionService paymentTransactionService,
-        SingleReconciliationService singleReconciliationService
-    ) {
-        this.paymentTransactionService = paymentTransactionService;
-        this.singleReconciliationService = singleReconciliationService;
-    }
 
     @Override
     public int reconcilePendingTransactions(int limit) {

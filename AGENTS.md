@@ -70,6 +70,7 @@ For a fresh thread, use this workflow:
 - Core entity classes should have a brief class-level comment that explains their responsibility in the business flow.
 - Public service interface methods and other externally consumed public methods should have concise contract comments.
 - Business orchestration code should have brief process comments at key steps so readers can quickly understand the main flow.
+- Multi-step orchestration implementations such as `*ServiceImpl`, jobs, and workflow handlers should annotate the main business steps in order so a new reader can follow the flow without reconstructing it mentally.
 - Scheduled job classes and scheduled methods should have brief comments explaining the trigger purpose and business responsibility.
 - Interface-layer comments should explain the contract briefly, including key parameters or special behavior when it is not obvious.
 - Enum classes should have brief class-level comments, and enum items should carry readable descriptions when they represent business states or externally visible codes.
@@ -83,6 +84,14 @@ For a fresh thread, use this workflow:
 - Put the interface and implementation in the same business module `service` package unless there is a strong reason to split them further.
 - For CRUD-oriented MyBatis-Plus services, prefer `XxxService extends IService<Entity>` and `XxxServiceImpl extends ServiceImpl<Mapper, Entity>`.
 - Do not force `IService` onto orchestration-style services that are not centered on a single entity aggregate.
+
+## Constructor Conventions
+
+- For Spring-managed dependency injection classes such as `@RestController`, `@Service`, `@Component`, jobs, and security components, prefer Lombok `@RequiredArgsConstructor`.
+- Keep injected dependencies as `private final` fields so the generated constructor only contains required dependencies.
+- Do not use `@AllArgsConstructor` for dependency injection classes.
+- If a constructor contains custom initialization logic, parameter transformation, validation, or other side effects, keep the explicit constructor instead of replacing it with Lombok.
+- Non-DI classes such as exceptions or value objects may keep explicit constructors when that makes the business meaning clearer.
 
 ## Commit Messages
 

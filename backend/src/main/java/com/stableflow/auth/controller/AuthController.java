@@ -8,6 +8,7 @@ import com.stableflow.auth.vo.CurrentUserVo;
 import com.stableflow.auth.vo.LoginResponseVo;
 import com.stableflow.system.api.ApiResponse;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,13 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/auth")
 @Tag(name = "Auth", description = "Authentication APIs / 认证接口")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
-
-    public AuthController(AuthService authService) {
-        this.authService = authService;
-    }
 
     @PostMapping("/login")
     @Operation(summary = "Merchant login / 商家登录")

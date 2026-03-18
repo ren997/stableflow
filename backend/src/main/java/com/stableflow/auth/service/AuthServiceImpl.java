@@ -11,28 +11,18 @@ import com.stableflow.system.exception.ErrorCode;
 import com.stableflow.system.security.CurrentMerchant;
 import com.stableflow.system.security.CurrentMerchantProvider;
 import com.stableflow.system.security.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
     private final MerchantMapper merchantMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final CurrentMerchantProvider currentMerchantProvider;
-
-    public AuthServiceImpl(
-        MerchantMapper merchantMapper,
-        PasswordEncoder passwordEncoder,
-        JwtTokenProvider jwtTokenProvider,
-        CurrentMerchantProvider currentMerchantProvider
-    ) {
-        this.merchantMapper = merchantMapper;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtTokenProvider = jwtTokenProvider;
-        this.currentMerchantProvider = currentMerchantProvider;
-    }
 
     @Override
     public LoginResponseVo login(LoginRequestDto request) {

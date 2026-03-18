@@ -8,24 +8,18 @@ import com.stableflow.reconciliation.service.ReconciliationRecordService;
 import com.stableflow.verification.enums.PaymentVerificationResultEnum;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class PaymentTransactionServiceImpl
     extends ServiceImpl<PaymentTransactionMapper, PaymentTransaction>
     implements PaymentTransactionService {
 
     private final PaymentTransactionMapper paymentTransactionMapper;
     private final ReconciliationRecordService reconciliationRecordService;
-
-    public PaymentTransactionServiceImpl(
-        PaymentTransactionMapper paymentTransactionMapper,
-        ReconciliationRecordService reconciliationRecordService
-    ) {
-        this.paymentTransactionMapper = paymentTransactionMapper;
-        this.reconciliationRecordService = reconciliationRecordService;
-    }
 
     @Override
     public boolean existsByTxHash(String txHash) {

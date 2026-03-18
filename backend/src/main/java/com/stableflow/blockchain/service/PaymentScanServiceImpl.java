@@ -19,11 +19,13 @@ import com.stableflow.verification.enums.PaymentVerificationResultEnum;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class PaymentScanServiceImpl implements PaymentScanService {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentScanService.class);
@@ -37,24 +39,6 @@ public class PaymentScanServiceImpl implements PaymentScanService {
     private final SolanaProperties solanaProperties;
     private final SolanaScanProperties solanaScanProperties;
     private final ObjectMapper objectMapper;
-
-    public PaymentScanServiceImpl(
-        SolanaClient solanaClient,
-        MerchantPaymentConfigService merchantPaymentConfigService,
-        PaymentScanCursorService paymentScanCursorService,
-        PaymentTransactionService paymentTransactionService,
-        SolanaProperties solanaProperties,
-        SolanaScanProperties solanaScanProperties,
-        ObjectMapper objectMapper
-    ) {
-        this.solanaClient = solanaClient;
-        this.merchantPaymentConfigService = merchantPaymentConfigService;
-        this.paymentScanCursorService = paymentScanCursorService;
-        this.paymentTransactionService = paymentTransactionService;
-        this.solanaProperties = solanaProperties;
-        this.solanaScanProperties = solanaScanProperties;
-        this.objectMapper = objectMapper;
-    }
 
     @Override
     public int scanAllActiveAddresses() {

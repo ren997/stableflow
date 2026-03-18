@@ -14,10 +14,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stableflow.system.exception.BusinessException;
 import com.stableflow.system.exception.ErrorCode;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class SolanaRpcClient implements SolanaClient {
 
     private static final String COMMITMENT_CONFIRMED = "confirmed";
@@ -28,16 +30,6 @@ public class SolanaRpcClient implements SolanaClient {
     private final RpcHttpClient rpcHttpClient;
     private final SolanaTransactionConverter solanaTransactionConverter;
     private final ObjectMapper objectMapper;
-
-    public SolanaRpcClient(
-        RpcHttpClient rpcHttpClient,
-        SolanaTransactionConverter solanaTransactionConverter,
-        ObjectMapper objectMapper
-    ) {
-        this.rpcHttpClient = rpcHttpClient;
-        this.solanaTransactionConverter = solanaTransactionConverter;
-        this.objectMapper = objectMapper;
-    }
 
     @Override
     public List<SolanaTransactionSignatureVo> getSignaturesForAddress(String address, int limit) {

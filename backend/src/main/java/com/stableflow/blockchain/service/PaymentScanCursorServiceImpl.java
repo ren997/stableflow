@@ -6,19 +6,17 @@ import com.stableflow.blockchain.entity.PaymentScanCursor;
 import com.stableflow.blockchain.mapper.PaymentScanCursorMapper;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class PaymentScanCursorServiceImpl
     extends ServiceImpl<PaymentScanCursorMapper, PaymentScanCursor>
     implements PaymentScanCursorService {
 
     private final PaymentScanCursorMapper paymentScanCursorMapper;
-
-    public PaymentScanCursorServiceImpl(PaymentScanCursorMapper paymentScanCursorMapper) {
-        this.paymentScanCursorMapper = paymentScanCursorMapper;
-    }
 
     @Override
     public PaymentScanCursor getOrCreate(String recipientAddress) {

@@ -12,6 +12,7 @@ import com.stableflow.reconciliation.vo.PaymentProofVo;
 import com.stableflow.system.api.ApiResponse;
 import jakarta.validation.Valid;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,15 +24,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/invoices")
 @Tag(name = "Invoice", description = "Invoice APIs / 账单接口")
+@RequiredArgsConstructor
 public class InvoiceController {
 
     private final InvoiceService invoiceService;
     private final PaymentProofService paymentProofService;
-
-    public InvoiceController(InvoiceService invoiceService, PaymentProofService paymentProofService) {
-        this.invoiceService = invoiceService;
-        this.paymentProofService = paymentProofService;
-    }
 
     @PostMapping
     @Operation(summary = "Create invoice / 创建账单")

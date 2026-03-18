@@ -16,11 +16,13 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Transactional single-payment verification service / 负责单笔候选交易事务验证的服务 */
 @Service
+@RequiredArgsConstructor
 public class SinglePaymentVerificationServiceImpl implements SinglePaymentVerificationService {
 
     private static final Set<PaymentVerificationResultEnum> EFFECTIVE_VERIFICATION_RESULTS = Set.of(
@@ -33,16 +35,6 @@ public class SinglePaymentVerificationServiceImpl implements SinglePaymentVerifi
     private final PaymentTransactionService paymentTransactionService;
     private final InvoicePaymentRequestMapper invoicePaymentRequestMapper;
     private final InvoiceService invoiceService;
-
-    public SinglePaymentVerificationServiceImpl(
-        PaymentTransactionService paymentTransactionService,
-        InvoicePaymentRequestMapper invoicePaymentRequestMapper,
-        InvoiceService invoiceService
-    ) {
-        this.paymentTransactionService = paymentTransactionService;
-        this.invoicePaymentRequestMapper = invoicePaymentRequestMapper;
-        this.invoiceService = invoiceService;
-    }
 
     @Transactional
     @Override

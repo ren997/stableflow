@@ -10,24 +10,18 @@ import com.stableflow.system.exception.BusinessException;
 import com.stableflow.system.exception.ErrorCode;
 import com.stableflow.system.security.CurrentMerchantProvider;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class MerchantPaymentConfigServiceImpl
     extends ServiceImpl<MerchantPaymentConfigMapper, MerchantPaymentConfig>
     implements MerchantPaymentConfigService {
 
     private final MerchantPaymentConfigMapper paymentConfigMapper;
     private final CurrentMerchantProvider currentMerchantProvider;
-
-    public MerchantPaymentConfigServiceImpl(
-        MerchantPaymentConfigMapper paymentConfigMapper,
-        CurrentMerchantProvider currentMerchantProvider
-    ) {
-        this.paymentConfigMapper = paymentConfigMapper;
-        this.currentMerchantProvider = currentMerchantProvider;
-    }
 
     @Transactional
     @Override

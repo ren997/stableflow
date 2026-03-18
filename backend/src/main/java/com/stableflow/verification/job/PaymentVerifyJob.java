@@ -2,6 +2,7 @@ package com.stableflow.verification.job;
 
 import com.stableflow.system.config.PaymentVerifyProperties;
 import com.stableflow.verification.service.PaymentVerificationService;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -9,20 +10,13 @@ import org.springframework.stereotype.Component;
 
 /** Scheduled job that verifies pending candidate transactions discovered by scanning / 定时验证扫描得到的待处理候选交易 */
 @Component
+@RequiredArgsConstructor
 public class PaymentVerifyJob {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentVerifyJob.class);
 
     private final PaymentVerificationService paymentVerificationService;
     private final PaymentVerifyProperties paymentVerifyProperties;
-
-    public PaymentVerifyJob(
-        PaymentVerificationService paymentVerificationService,
-        PaymentVerifyProperties paymentVerifyProperties
-    ) {
-        this.paymentVerificationService = paymentVerificationService;
-        this.paymentVerifyProperties = paymentVerifyProperties;
-    }
 
     @Scheduled(
         fixedDelayString = "${stableflow.verification.job.fixed-delay-ms:30000}",

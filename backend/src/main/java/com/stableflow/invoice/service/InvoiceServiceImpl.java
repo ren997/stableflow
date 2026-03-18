@@ -25,10 +25,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> implements InvoiceService {
 
     private static final String DEFAULT_CHAIN = "SOLANA";
@@ -39,20 +41,6 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
     private final MerchantPaymentConfigService merchantPaymentConfigService;
     private final CurrentMerchantProvider currentMerchantProvider;
     private final PaymentProperties paymentProperties;
-
-    public InvoiceServiceImpl(
-        InvoiceMapper invoiceMapper,
-        InvoicePaymentRequestMapper invoicePaymentRequestMapper,
-        MerchantPaymentConfigService merchantPaymentConfigService,
-        CurrentMerchantProvider currentMerchantProvider,
-        PaymentProperties paymentProperties
-    ) {
-        this.invoiceMapper = invoiceMapper;
-        this.invoicePaymentRequestMapper = invoicePaymentRequestMapper;
-        this.merchantPaymentConfigService = merchantPaymentConfigService;
-        this.currentMerchantProvider = currentMerchantProvider;
-        this.paymentProperties = paymentProperties;
-    }
 
     @Transactional
     @Override
