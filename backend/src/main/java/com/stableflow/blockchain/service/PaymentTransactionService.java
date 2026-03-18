@@ -17,4 +17,7 @@ public interface PaymentTransactionService extends IService<PaymentTransaction> 
 
     /** List verified transactions that still have not been consumed by reconciliation / 查询已验证但尚未被核销消费的交易 */
     List<PaymentTransaction> listPendingReconciliationTransactions(int limit);
+
+    /** Return the latest transaction associated with the invoice / 返回账单关联的最新交易 */
+    PaymentTransaction getLatestTransactionByInvoiceId(Long invoiceId);
 }

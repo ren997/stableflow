@@ -1,6 +1,8 @@
 package com.stableflow.invoice.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.stableflow.blockchain.entity.PaymentTransaction;
+import com.stableflow.blockchain.service.PaymentTransactionService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.stableflow.invoice.dto.CreateInvoiceRequestDto;
 import com.stableflow.invoice.entity.Invoice;
@@ -11,8 +13,11 @@ import com.stableflow.invoice.mapper.InvoicePaymentRequestMapper;
 import com.stableflow.invoice.vo.InvoiceDetailVo;
 import com.stableflow.invoice.vo.InvoiceListItemVo;
 import com.stableflow.invoice.vo.PaymentInfoVo;
+import com.stableflow.invoice.vo.PaymentStatusVo;
 import com.stableflow.merchant.entity.MerchantPaymentConfig;
 import com.stableflow.merchant.service.MerchantPaymentConfigService;
+import com.stableflow.reconciliation.entity.ReconciliationRecord;
+import com.stableflow.reconciliation.service.ReconciliationRecordService;
 import com.stableflow.system.config.PaymentProperties;
 import com.stableflow.system.exception.BusinessException;
 import com.stableflow.system.exception.ErrorCode;
@@ -41,6 +46,8 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
     private final MerchantPaymentConfigService merchantPaymentConfigService;
     private final CurrentMerchantProvider currentMerchantProvider;
     private final PaymentProperties paymentProperties;
+    private final PaymentTransactionService paymentTransactionService;
+    private final ReconciliationRecordService reconciliationRecordService;
 
     @Transactional
     @Override
@@ -103,6 +110,26 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
     public PaymentInfoVo getPaymentInfo(Long invoiceId) {
         Invoice invoice = getOwnedInvoice(invoiceId);
         return toPaymentInfoResponse(getPaymentRequest(invoice.getId()));
+    }
+
+    @Override
+    public PaymentStatusVo getPaymentStatus(Long invoiceId) {
+        Invoice invoice = getOwnedInvoice(invoiceId);
+        PaymentTransaction latestTransaction = paymentTransactionService.getLatestTransactionByInvoiceId(invoice.getId());
+        ReconciliationRecord latestReconciliationRecord = reconciliationRecordService.getLatestRecordByInvoiceId(invoice.getId());
+
+        return new PaymentStatusVo(
+            invoice.getId(),
+            invoice.getPublicId(),
+            invoice.getInvoiceNo(),
+            invoice.getStatus(),
+            splitExceptionTags(invoice.getExceptionTags()),
+            invoice.getPaidAt(),
+            resolveLastProcessedAt(latestReconciliationRecord, latestTransaction),
+            latestTransaction == null ? null : latestTransaction.getTxHash(),
+            latestTransaction == null ? null : latestTransaction.getVerificationResult(),
+            latestTransaction == null ? null : latestTransaction.getPaymentStatus()
+        );
     }
 
     private Invoice getOwnedInvoice(Long invoiceId) {
@@ -194,6 +221,26 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
 
     private String normalizeOrDefault(String value, String defaultValue) {
         return value == null || value.isBlank() ? defaultValue : value.toUpperCase(Locale.ROOT);
+    }
+
+    private List<String> splitExceptionTags(String exceptionTags) {
+        if (exceptionTags == null || exceptionTags.isBlank()) {
+            return List.of();
+        }
+        return List.of(exceptionTags.split(",")).stream()
+            .map(String::trim)
+            .filter(tag -> !tag.isBlank())
+            .toList();
+    }
+
+    private OffsetDateTime resolveLastProcessedAt(
+        ReconciliationRecord latestReconciliationRecord,
+        PaymentTransaction latestTransaction
+    ) {
+        if (latestReconciliationRecord != null && latestReconciliationRecord.getProcessedAt() != null) {
+            return latestReconciliationRecord.getProcessedAt();
+        }
+        return latestTransaction == null ? null : latestTransaction.getBlockTime();
     }
 
     private String encode(String value) {

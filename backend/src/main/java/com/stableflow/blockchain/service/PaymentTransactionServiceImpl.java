@@ -88,4 +88,19 @@ public class PaymentTransactionServiceImpl
 
         return pendingTransactions;
     }
+
+    @Override
+    public PaymentTransaction getLatestTransactionByInvoiceId(Long invoiceId) {
+        if (invoiceId == null) {
+            return null;
+        }
+        return paymentTransactionMapper.selectOne(
+            new LambdaQueryWrapper<PaymentTransaction>()
+                .eq(PaymentTransaction::getInvoiceId, invoiceId)
+                .orderByDesc(PaymentTransaction::getBlockTime)
+                .orderByDesc(PaymentTransaction::getCreatedAt)
+                .orderByDesc(PaymentTransaction::getId)
+                .last("LIMIT 1")
+        );
+    }
 }

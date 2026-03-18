@@ -6,6 +6,7 @@ import com.stableflow.invoice.entity.Invoice;
 import com.stableflow.invoice.vo.InvoiceDetailVo;
 import com.stableflow.invoice.vo.InvoiceListItemVo;
 import com.stableflow.invoice.vo.PaymentInfoVo;
+import com.stableflow.invoice.vo.PaymentStatusVo;
 import java.util.List;
 
 public interface InvoiceService extends IService<Invoice> {
@@ -21,4 +22,7 @@ public interface InvoiceService extends IService<Invoice> {
 
     /** Return reusable payment information for an invoice / 返回账单的可复用支付信息 */
     PaymentInfoVo getPaymentInfo(Long invoiceId);
+
+    /** Return the current payment status snapshot of an invoice / 返回账单当前支付状态快照 */
+    PaymentStatusVo getPaymentStatus(Long invoiceId);
 }

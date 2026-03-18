@@ -7,6 +7,7 @@ import com.stableflow.invoice.service.InvoiceService;
 import com.stableflow.invoice.vo.InvoiceDetailVo;
 import com.stableflow.invoice.vo.InvoiceListItemVo;
 import com.stableflow.invoice.vo.PaymentInfoVo;
+import com.stableflow.invoice.vo.PaymentStatusVo;
 import com.stableflow.reconciliation.service.PaymentProofService;
 import com.stableflow.reconciliation.vo.PaymentProofVo;
 import com.stableflow.system.api.ApiResponse;
@@ -52,6 +53,12 @@ public class InvoiceController {
     @Operation(summary = "Get invoice payment info / 获取账单支付信息")
     public ApiResponse<PaymentInfoVo> getPaymentInfo(@PathVariable("id") Long id) {
         return ApiResponse.success(invoiceService.getPaymentInfo(id));
+    }
+
+    @GetMapping("/{id}/payment-status")
+    @Operation(summary = "Get invoice payment status / 获取账单支付状态")
+    public ApiResponse<PaymentStatusVo> getPaymentStatus(@PathVariable("id") Long id) {
+        return ApiResponse.success(invoiceService.getPaymentStatus(id));
     }
 
     @GetMapping("/{id}/payment-proof")

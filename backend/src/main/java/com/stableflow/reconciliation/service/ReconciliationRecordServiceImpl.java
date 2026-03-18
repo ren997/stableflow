@@ -34,4 +34,19 @@ public class ReconciliationRecordServiceImpl
         reconciliationRecordMapper.insert(reconciliationRecord);
         return true;
     }
+
+    @Override
+    public ReconciliationRecord getLatestRecordByInvoiceId(Long invoiceId) {
+        if (invoiceId == null) {
+            return null;
+        }
+        return reconciliationRecordMapper.selectOne(
+            new LambdaQueryWrapper<ReconciliationRecord>()
+                .eq(ReconciliationRecord::getInvoiceId, invoiceId)
+                .orderByDesc(ReconciliationRecord::getProcessedAt)
+                .orderByDesc(ReconciliationRecord::getCreatedAt)
+                .orderByDesc(ReconciliationRecord::getId)
+                .last("LIMIT 1")
+        );
+    }
 }
