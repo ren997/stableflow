@@ -3,6 +3,7 @@ package com.stableflow.auth.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.stableflow.auth.dto.LoginRequestDto;
+import com.stableflow.auth.dto.RegisterRequestDto;
 import com.stableflow.auth.service.AuthService;
 import com.stableflow.auth.vo.CurrentUserVo;
 import com.stableflow.auth.vo.LoginResponseVo;
@@ -22,6 +23,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+
+    @PostMapping("/register")
+    @Operation(summary = "Merchant register / 商家注册")
+    public ApiResponse<LoginResponseVo> register(@Valid @RequestBody RegisterRequestDto request) {
+        return ApiResponse.success(authService.register(request));
+    }
 
     @PostMapping("/login")
     @Operation(summary = "Merchant login / 商家登录")

@@ -1,10 +1,14 @@
 package com.stableflow.auth.service;
 
 import com.stableflow.auth.dto.LoginRequestDto;
+import com.stableflow.auth.dto.RegisterRequestDto;
 import com.stableflow.auth.vo.CurrentUserVo;
 import com.stableflow.auth.vo.LoginResponseVo;
 
 public interface AuthService {
+
+    /** Register a new merchant account and issue a JWT token / 注册新商家账号并签发 JWT token */
+    LoginResponseVo register(RegisterRequestDto request);
 
     /** Authenticate merchant credentials and issue a JWT token / 校验商家凭证并签发 JWT token */
     LoginResponseVo login(LoginRequestDto request);

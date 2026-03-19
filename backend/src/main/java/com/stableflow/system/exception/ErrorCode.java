@@ -9,6 +9,7 @@ public enum ErrorCode {
     PAYMENT_PROOF_NOT_FOUND(40404, "Payment proof not found"),
     INVALID_CREDENTIALS(40001, "Invalid credentials"),
     INVALID_REQUEST(40002, "Invalid request"),
+    EMAIL_ALREADY_REGISTERED(40003, "Email already registered"),
     BLOCKCHAIN_RPC_TIMEOUT(50010, "Blockchain RPC timeout"),
     BLOCKCHAIN_RPC_HTTP_ERROR(50011, "Blockchain RPC HTTP error"),
     BLOCKCHAIN_RPC_ERROR(50012, "Blockchain RPC error"),
