@@ -3,6 +3,8 @@ package com.stableflow.invoice.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.stableflow.invoice.dto.CreateInvoiceRequestDto;
+import com.stableflow.invoice.dto.InvoiceIdQueryDto;
+import com.stableflow.invoice.dto.InvoiceListQueryDto;
 import com.stableflow.invoice.service.InvoiceService;
 import com.stableflow.invoice.vo.InvoiceDetailVo;
 import com.stableflow.invoice.vo.InvoiceListItemVo;
@@ -14,12 +16,9 @@ import com.stableflow.system.api.ApiResponse;
 import com.stableflow.system.api.PageResult;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -37,37 +36,39 @@ public class InvoiceController {
         return ApiResponse.success(invoiceService.createInvoice(request));
     }
 
-    @GetMapping
-    @Operation(summary = "List invoices / 查询账单列表")
-    public ApiResponse<PageResult<InvoiceListItemVo>> listInvoices(
-        @RequestParam(required = false) String status,
-        @RequestParam(defaultValue = "1") int page,
-        @RequestParam(defaultValue = "20") int size
-    ) {
-        return ApiResponse.success(invoiceService.listInvoices(status, page, size));
+    @PostMapping("/list")
+    @Operation(summary = "Query invoice list / 查询账单列表")
+    public ApiResponse<PageResult<InvoiceListItemVo>> listInvoices(@Valid @RequestBody InvoiceListQueryDto request) {
+        return ApiResponse.success(
+            invoiceService.listInvoices(
+                request.status(),
+                request.page() == null ? 1 : request.page(),
+                request.size() == null ? 20 : request.size()
+            )
+        );
     }
 
-    @GetMapping("/{id}")
-    @Operation(summary = "Get invoice detail / 获取账单详情")
-    public ApiResponse<InvoiceDetailVo> getInvoiceDetail(@PathVariable("id") Long id) {
-        return ApiResponse.success(invoiceService.getInvoiceDetail(id));
+    @PostMapping("/detail")
+    @Operation(summary = "Query invoice detail / 查询账单详情")
+    public ApiResponse<InvoiceDetailVo> getInvoiceDetail(@Valid @RequestBody InvoiceIdQueryDto request) {
+        return ApiResponse.success(invoiceService.getInvoiceDetail(request.id()));
     }
 
-    @GetMapping("/{id}/payment-info")
-    @Operation(summary = "Get invoice payment info / 获取账单支付信息")
-    public ApiResponse<PaymentInfoVo> getPaymentInfo(@PathVariable("id") Long id) {
-        return ApiResponse.success(invoiceService.getPaymentInfo(id));
+    @PostMapping("/payment-info")
+    @Operation(summary = "Query invoice payment info / 查询账单支付信息")
+    public ApiResponse<PaymentInfoVo> getPaymentInfo(@Valid @RequestBody InvoiceIdQueryDto request) {
+        return ApiResponse.success(invoiceService.getPaymentInfo(request.id()));
     }
 
-    @GetMapping("/{id}/payment-status")
-    @Operation(summary = "Get invoice payment status / 获取账单支付状态")
-    public ApiResponse<PaymentStatusVo> getPaymentStatus(@PathVariable("id") Long id) {
-        return ApiResponse.success(invoiceService.getPaymentStatus(id));
+    @PostMapping("/payment-status")
+    @Operation(summary = "Query invoice payment status / 查询账单支付状态")
+    public ApiResponse<PaymentStatusVo> getPaymentStatus(@Valid @RequestBody InvoiceIdQueryDto request) {
+        return ApiResponse.success(invoiceService.getPaymentStatus(request.id()));
     }
 
-    @GetMapping("/{id}/payment-proof")
-    @Operation(summary = "Get invoice payment proof / 获取账单支付凭证")
-    public ApiResponse<PaymentProofVo> getPaymentProof(@PathVariable("id") Long id) {
-        return ApiResponse.success(paymentProofService.getLatestProof(id));
+    @PostMapping("/payment-proof")
+    @Operation(summary = "Query invoice payment proof / 查询账单支付凭证")
+    public ApiResponse<PaymentProofVo> getPaymentProof(@Valid @RequestBody InvoiceIdQueryDto request) {
+        return ApiResponse.success(paymentProofService.getLatestProof(request.id()));
     }
 }

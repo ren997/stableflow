@@ -67,6 +67,11 @@ For a fresh thread, use this workflow:
 - Do not expose raw `JsonNode` or generic JSON structures as outward-facing return models when the structure is known.
 - Prefer explicit Java entities for request and response models.
 - If a response contains nested structures, prefer static inner classes inside the outer `Vo`.
+- Backend internal and protected query interfaces should use `POST` plus `*Dto` request bodies instead of RESTful `GET` + `@PathVariable` or `@RequestParam`.
+- Do not use `@PathVariable` or `@RequestParam` as the primary business input style for backend APIs; wrap inputs in request DTOs for single `id`, pagination, filters, and other structured inputs.
+- For empty-parameter backend queries, request DTOs are not mandatory. New interfaces may omit the request body when there is no business input to carry.
+- Public shareable read-only interfaces may keep `GET` when direct link access is part of the product behavior. The current explicit exception is `GET /api/pay/{publicId}`.
+- For query routes, prefer explicit action paths such as `/list`, `/detail`, `/payment-info`, `/payment-status`, and `/payment-proof`.
 
 ## Comment Conventions
 

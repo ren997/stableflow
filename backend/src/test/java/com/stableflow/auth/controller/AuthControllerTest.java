@@ -2,12 +2,12 @@ package com.stableflow.auth.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stableflow.auth.dto.CurrentUserRequestDto;
 import com.stableflow.auth.dto.RegisterRequestDto;
 import com.stableflow.auth.service.AuthService;
 import com.stableflow.auth.vo.CurrentUserVo;
@@ -90,11 +90,21 @@ class AuthControllerTest {
             new CurrentUserVo(100L, "StableFlow Demo", "demo@stableflow.com", MerchantStatusEnum.ACTIVE)
         );
 
-        mockMvc.perform(get("/api/auth/me"))
+        mockMvc.perform(
+                post("/api/auth/me")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new CurrentUserRequestDto()))
+            )
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.merchantId").value(100L))
             .andExpect(jsonPath("$.data.merchantName").value("StableFlow Demo"))
             .andExpect(jsonPath("$.data.email").value("demo@stableflow.com"))
             .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+    }
+
+    @Test
+    void shouldNotExposeGetMeRoute() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/auth/me"))
+            .andExpect(status().isMethodNotAllowed());
     }
 }
