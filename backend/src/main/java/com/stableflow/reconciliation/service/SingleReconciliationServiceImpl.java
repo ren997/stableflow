@@ -190,20 +190,22 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
         return objectMapper.valueToTree(exceptionTags);
     }
 
-    private String mergeExceptionTags(String existingTags, List<String> newTags) {
+    private List<String> mergeExceptionTags(List<String> existingTags, List<String> newTags) {
         // 保持异常标签去重且追加式合并，避免后一次核销把已有异常信息冲掉。
         Set<String> mergedTags = new LinkedHashSet<>();
-        if (existingTags != null && !existingTags.isBlank()) {
-            for (String tag : existingTags.split(",")) {
-                if (!tag.isBlank()) {
-                    mergedTags.add(tag.trim());
-                }
-            }
+        if (existingTags != null) {
+            existingTags.stream()
+                .filter(tag -> tag != null && !tag.isBlank())
+                .map(String::trim)
+                .forEach(mergedTags::add);
         }
         if (newTags != null) {
-            mergedTags.addAll(newTags);
+            newTags.stream()
+                .filter(tag -> tag != null && !tag.isBlank())
+                .map(String::trim)
+                .forEach(mergedTags::add);
         }
-        return mergedTags.isEmpty() ? null : String.join(",", mergedTags);
+        return mergedTags.isEmpty() ? null : List.copyOf(mergedTags);
     }
 
     private record ReconciliationDecision(
@@ -221,8 +223,8 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
     private record InvoiceSnapshot(
         /** Final invoice status after reconciliation / 核销后的最终账单状态 */
         InvoiceStatusEnum status,
-        /** Final serialized exception tags / 最终序列化异常标签 */
-        String exceptionTags,
+        /** Final exception tag code list / 最终异常标签编码列表 */
+        List<String> exceptionTags,
         /** Final paid time in UTC / 最终支付时间（UTC） */
         OffsetDateTime paidAt
     ) {

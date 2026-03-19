@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.stableflow.blockchain.entity.PaymentTransaction;
 import com.stableflow.blockchain.service.PaymentTransactionService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.stableflow.invoice.enums.ExceptionTagEnum;
 import com.stableflow.invoice.dto.CreateInvoiceRequestDto;
 import com.stableflow.invoice.entity.Invoice;
 import com.stableflow.invoice.entity.InvoicePaymentRequest;
@@ -133,7 +134,7 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
             invoice.getPublicId(),
             invoice.getInvoiceNo(),
             invoice.getStatus(),
-            splitExceptionTags(invoice.getExceptionTags()),
+            normalizeExceptionTags(invoice.getExceptionTags()),
             invoice.getPaidAt(),
             resolveLastProcessedAt(latestReconciliationRecord, latestTransaction),
             latestTransaction == null ? null : latestTransaction.getTxHash(),
@@ -233,13 +234,16 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
         return value == null || value.isBlank() ? defaultValue : value.toUpperCase(Locale.ROOT);
     }
 
-    private List<String> splitExceptionTags(String exceptionTags) {
-        if (exceptionTags == null || exceptionTags.isBlank()) {
+    private List<ExceptionTagEnum> normalizeExceptionTags(List<String> exceptionTags) {
+        if (exceptionTags == null || exceptionTags.isEmpty()) {
             return List.of();
         }
-        return List.of(exceptionTags.split(",")).stream()
+        return exceptionTags.stream()
+            .filter(tag -> tag != null && !tag.isBlank())
             .map(String::trim)
-            .filter(tag -> !tag.isBlank())
+            .distinct()
+            .map(ExceptionTagEnum::fromCode)
+            .filter(java.util.Objects::nonNull)
             .toList();
     }
 

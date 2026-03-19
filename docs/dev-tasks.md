@@ -925,7 +925,7 @@
 
 #### T1001 修复 Invoice.exceptionTags 类型与 DB JSONB 不匹配
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0
 - 依赖：T002

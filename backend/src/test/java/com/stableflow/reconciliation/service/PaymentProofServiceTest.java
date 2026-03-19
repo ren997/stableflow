@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stableflow.blockchain.entity.PaymentTransaction;
 import com.stableflow.invoice.entity.Invoice;
+import com.stableflow.invoice.enums.ExceptionTagEnum;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import com.stableflow.invoice.mapper.InvoiceMapper;
 import com.stableflow.reconciliation.entity.PaymentProof;
@@ -70,7 +71,7 @@ class PaymentProofServiceTest {
             paymentTransaction,
             reconciliationRecord,
             InvoiceStatusEnum.PAID,
-            "LATE_PAYMENT,DUPLICATE_PAYMENT",
+            List.of("LATE_PAYMENT", "DUPLICATE_PAYMENT"),
             utc("2026-03-17T10:00:00Z")
         );
 
@@ -126,7 +127,7 @@ class PaymentProofServiceTest {
         assertEquals("tx-paid", paymentProofVo.txHash());
         assertEquals("ref_paid", paymentProofVo.referenceKey());
         assertEquals(InvoiceStatusEnum.PAID, paymentProofVo.finalStatus());
-        assertEquals(List.of("LATE_PAYMENT"), paymentProofVo.exceptionTags());
+        assertEquals(List.of(ExceptionTagEnum.LATE_PAYMENT), paymentProofVo.exceptionTags());
     }
 
     @Test

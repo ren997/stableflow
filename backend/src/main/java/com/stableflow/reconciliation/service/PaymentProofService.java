@@ -8,6 +8,7 @@ import com.stableflow.reconciliation.entity.PaymentProof;
 import com.stableflow.reconciliation.entity.ReconciliationRecord;
 import com.stableflow.reconciliation.vo.PaymentProofVo;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 public interface PaymentProofService extends IService<PaymentProof> {
 
@@ -17,7 +18,7 @@ public interface PaymentProofService extends IService<PaymentProof> {
         PaymentTransaction paymentTransaction,
         ReconciliationRecord reconciliationRecord,
         InvoiceStatusEnum finalStatus,
-        String exceptionTags,
+        List<String> exceptionTags,
         OffsetDateTime paidAt
     );
 

@@ -1,5 +1,6 @@
 package com.stableflow.invoice.vo;
 
+import com.stableflow.invoice.enums.ExceptionTagEnum;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import com.stableflow.verification.enums.PaymentTransactionStatusEnum;
 import com.stableflow.verification.enums.PaymentVerificationResultEnum;
@@ -18,8 +19,8 @@ public record PaymentStatusVo(
     String invoiceNo,
     @Schema(description = "Final invoice status / 最终账单状态", implementation = InvoiceStatusEnum.class)
     InvoiceStatusEnum status,
-    @Schema(description = "Exception tags / 异常标签")
-    List<String> exceptionTags,
+    @Schema(description = "Exception tags / 异常标签", implementation = ExceptionTagEnum.class)
+    List<ExceptionTagEnum> exceptionTags,
     @Schema(description = "Invoice paid time in UTC / 账单支付时间（UTC）")
     OffsetDateTime paidAt,
     @Schema(description = "Latest processed time in UTC / 最近处理时间（UTC）")

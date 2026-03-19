@@ -3,6 +3,7 @@ package com.stableflow.reconciliation.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stableflow.invoice.enums.ExceptionTagEnum;
 import com.stableflow.blockchain.entity.PaymentTransaction;
 import com.stableflow.invoice.entity.Invoice;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
@@ -49,7 +50,7 @@ public class PaymentProofServiceImpl extends ServiceImpl<PaymentProofMapper, Pay
         PaymentTransaction paymentTransaction,
         ReconciliationRecord reconciliationRecord,
         InvoiceStatusEnum finalStatus,
-        String exceptionTags,
+        List<String> exceptionTags,
         OffsetDateTime paidAt
     ) {
         if (invoice == null || invoice.getId() == null || paymentTransaction == null || paymentTransaction.getTxHash() == null) {
@@ -78,7 +79,7 @@ public class PaymentProofServiceImpl extends ServiceImpl<PaymentProofMapper, Pay
                     paidAt,
                     paymentTransaction.getVerificationResult(),
                     finalStatus,
-                    splitExceptionTags(exceptionTags),
+                    normalizeExceptionTags(exceptionTags),
                     reconciliationRecord == null ? null : reconciliationRecord.getReconciliationStatus(),
                     reconciliationRecord == null ? null : reconciliationRecord.getResultMessage()
                 )
@@ -141,13 +142,16 @@ public class PaymentProofServiceImpl extends ServiceImpl<PaymentProofMapper, Pay
         return invoice;
     }
 
-    private List<String> splitExceptionTags(String exceptionTags) {
-        if (exceptionTags == null || exceptionTags.isBlank()) {
+    private List<ExceptionTagEnum> normalizeExceptionTags(List<String> exceptionTags) {
+        if (exceptionTags == null || exceptionTags.isEmpty()) {
             return List.of();
         }
-        return List.of(exceptionTags.split(",")).stream()
+        return exceptionTags.stream()
+            .filter(tag -> tag != null && !tag.isBlank())
             .map(String::trim)
-            .filter(tag -> !tag.isBlank())
+            .distinct()
+            .map(ExceptionTagEnum::fromCode)
+            .filter(java.util.Objects::nonNull)
             .toList();
     }
 
@@ -177,7 +181,7 @@ public class PaymentProofServiceImpl extends ServiceImpl<PaymentProofMapper, Pay
         /** Final invoice status / 最终账单状态 */
         InvoiceStatusEnum finalStatus,
         /** Exception tags / 异常标签 */
-        List<String> exceptionTags,
+        List<ExceptionTagEnum> exceptionTags,
         /** Reconciliation status / 核销状态 */
         com.stableflow.reconciliation.enums.ReconciliationStatusEnum reconciliationStatus,
         /** Reconciliation result message / 核销结果说明 */

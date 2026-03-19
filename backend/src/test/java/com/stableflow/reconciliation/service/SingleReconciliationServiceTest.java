@@ -15,6 +15,7 @@ import com.stableflow.reconciliation.entity.ReconciliationRecord;
 import com.stableflow.reconciliation.enums.ReconciliationStatusEnum;
 import com.stableflow.verification.enums.PaymentVerificationResultEnum;
 import java.time.OffsetDateTime;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -85,12 +86,29 @@ class SingleReconciliationServiceTest {
         ArgumentCaptor<Invoice> invoiceCaptor = ArgumentCaptor.forClass(Invoice.class);
         verify(invoiceService).updateById(invoiceCaptor.capture());
         assertEquals(InvoiceStatusEnum.PENDING, invoiceCaptor.getValue().getStatus());
-        assertEquals("WRONG_CURRENCY", invoiceCaptor.getValue().getExceptionTags());
+        assertEquals(List.of("WRONG_CURRENCY"), invoiceCaptor.getValue().getExceptionTags());
 
         ArgumentCaptor<ReconciliationRecord> recordCaptor = ArgumentCaptor.forClass(ReconciliationRecord.class);
         verify(reconciliationRecordService).saveIfAbsent(recordCaptor.capture());
         assertEquals(ReconciliationStatusEnum.SKIPPED, recordCaptor.getValue().getReconciliationStatus());
         verify(paymentProofService).saveIfAbsent(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void shouldDeduplicateExistingAndIncomingExceptionTags() {
+        PaymentTransaction paymentTransaction = transaction(103L, "tx-late", PaymentVerificationResultEnum.LATE_PAYMENT, utc("2026-03-17T10:00:00Z"));
+        Invoice invoice = invoice(103L, InvoiceStatusEnum.EXPIRED, List.of("LATE_PAYMENT", " ", "WRONG_CURRENCY"));
+
+        when(reconciliationRecordService.existsByInvoiceIdAndTxHash(103L, "tx-late")).thenReturn(false);
+        when(invoiceService.getById(103L)).thenReturn(invoice);
+        when(reconciliationRecordService.saveIfAbsent(any(ReconciliationRecord.class))).thenReturn(true);
+
+        boolean reconciled = singleReconciliationService.reconcileTransaction(paymentTransaction);
+
+        assertEquals(true, reconciled);
+        ArgumentCaptor<Invoice> invoiceCaptor = ArgumentCaptor.forClass(Invoice.class);
+        verify(invoiceService).updateById(invoiceCaptor.capture());
+        assertEquals(List.of("LATE_PAYMENT", "WRONG_CURRENCY"), invoiceCaptor.getValue().getExceptionTags());
     }
 
     @Test
@@ -117,7 +135,7 @@ class SingleReconciliationServiceTest {
         return paymentTransaction;
     }
 
-    private Invoice invoice(Long id, InvoiceStatusEnum status, String exceptionTags) {
+    private Invoice invoice(Long id, InvoiceStatusEnum status, List<String> exceptionTags) {
         Invoice invoice = new Invoice();
         invoice.setId(id);
         invoice.setStatus(status);

@@ -1,5 +1,6 @@
 package com.stableflow.reconciliation.vo;
 
+import com.stableflow.invoice.enums.ExceptionTagEnum;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import com.stableflow.reconciliation.enums.ReconciliationStatusEnum;
 import com.stableflow.verification.enums.PaymentVerificationResultEnum;
@@ -35,8 +36,8 @@ public record PaymentProofVo(
     PaymentVerificationResultEnum verificationResult,
     @Schema(description = "Invoice final status / 账单最终状态", implementation = InvoiceStatusEnum.class)
     InvoiceStatusEnum finalStatus,
-    @Schema(description = "Exception tags / 异常标签")
-    List<String> exceptionTags,
+    @Schema(description = "Exception tags / 异常标签", implementation = ExceptionTagEnum.class)
+    List<ExceptionTagEnum> exceptionTags,
     @Schema(description = "Reconciliation status / 核销状态", implementation = ReconciliationStatusEnum.class)
     ReconciliationStatusEnum reconciliationStatus,
     @Schema(description = "Reconciliation result message / 核销结果说明")

@@ -1,16 +1,20 @@
 package com.stableflow.invoice.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.stableflow.invoice.enums.ExceptionTagEnum;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import lombok.Data;
 
 /** Merchant invoice aggregate that represents the payable business order / 表示商家应收业务订单的账单聚合实体 */
 @Data
-@TableName("invoice")
+@TableName(value = "invoice", autoResultMap = true)
 public class Invoice {
 
     /** Primary key / 主键 */
@@ -44,8 +48,11 @@ public class Invoice {
     /** Current invoice status / 当前账单状态 */
     private InvoiceStatusEnum status;
 
-    /** Serialized exception tags / 序列化后的异常标签 */
-    private String exceptionTags;
+    /** Exception tag code list stored as JSON array / 以 JSON 数组存储的异常标签编码列表
+     *  @see ExceptionTagEnum#DESC
+     */
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private List<String> exceptionTags;
 
     /** Invoice expiry time in UTC / 账单过期时间（UTC） */
     private OffsetDateTime expireAt;

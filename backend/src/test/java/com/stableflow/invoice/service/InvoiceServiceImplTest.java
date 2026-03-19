@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.stableflow.blockchain.entity.PaymentTransaction;
 import com.stableflow.blockchain.service.PaymentTransactionService;
 import com.stableflow.invoice.entity.Invoice;
+import com.stableflow.invoice.enums.ExceptionTagEnum;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import com.stableflow.invoice.mapper.InvoiceMapper;
 import com.stableflow.invoice.mapper.InvoicePaymentRequestMapper;
@@ -84,7 +85,7 @@ class InvoiceServiceImplTest {
 
     @Test
     void shouldFallbackLastProcessedAtToLatestTransactionBlockTime() {
-        Invoice invoice = invoice(101L, 10L, InvoiceStatusEnum.PENDING, "WRONG_CURRENCY", null);
+        Invoice invoice = invoice(101L, 10L, InvoiceStatusEnum.PENDING, List.of("WRONG_CURRENCY"), null);
         PaymentTransaction latestTransaction = paymentTransaction(
             101L,
             "tx-latest",
@@ -100,7 +101,7 @@ class InvoiceServiceImplTest {
 
         PaymentStatusVo paymentStatus = invoiceService.getPaymentStatus(101L);
 
-        assertEquals(List.of("WRONG_CURRENCY"), paymentStatus.exceptionTags());
+        assertEquals(List.of(ExceptionTagEnum.WRONG_CURRENCY), paymentStatus.exceptionTags());
         assertEquals("tx-latest", paymentStatus.latestTxHash());
         assertEquals(PaymentVerificationResultEnum.WRONG_CURRENCY, paymentStatus.latestVerificationResult());
         assertEquals(PaymentTransactionStatusEnum.UNMATCHED, paymentStatus.latestPaymentStatus());
@@ -109,7 +110,7 @@ class InvoiceServiceImplTest {
 
     @Test
     void shouldUseLatestReconciliationProcessedTimeWhenExists() {
-        Invoice invoice = invoice(102L, 10L, InvoiceStatusEnum.PAID, "LATE_PAYMENT,DUPLICATE_PAYMENT", utc("2026-03-18T09:58:00Z"));
+        Invoice invoice = invoice(102L, 10L, InvoiceStatusEnum.PAID, List.of("LATE_PAYMENT", "DUPLICATE_PAYMENT"), utc("2026-03-18T09:58:00Z"));
         PaymentTransaction latestTransaction = paymentTransaction(
             102L,
             "tx-paid",
@@ -127,7 +128,7 @@ class InvoiceServiceImplTest {
         PaymentStatusVo paymentStatus = invoiceService.getPaymentStatus(102L);
 
         assertEquals(InvoiceStatusEnum.PAID, paymentStatus.status());
-        assertEquals(List.of("LATE_PAYMENT", "DUPLICATE_PAYMENT"), paymentStatus.exceptionTags());
+        assertEquals(List.of(ExceptionTagEnum.LATE_PAYMENT, ExceptionTagEnum.DUPLICATE_PAYMENT), paymentStatus.exceptionTags());
         assertEquals(utc("2026-03-18T09:58:00Z"), paymentStatus.paidAt());
         assertEquals(utc("2026-03-18T10:05:00Z"), paymentStatus.lastProcessedAt());
     }
@@ -171,7 +172,7 @@ class InvoiceServiceImplTest {
         Long id,
         Long merchantId,
         InvoiceStatusEnum status,
-        String exceptionTags,
+        List<String> exceptionTags,
         OffsetDateTime paidAt
     ) {
         Invoice invoice = new Invoice();

@@ -55,6 +55,11 @@ For a fresh thread, use this workflow:
 - Response/output view objects must use the `Vo` suffix.
 - Enum types must use the `Enum` suffix.
 - Business enum types should provide clear semantics such as `code` and `desc`, and expose getters when the enum is used in persistence, API payloads, or status mapping.
+- For fixed value domains such as statuses, results, exception tags, event types, and externally visible codes, define a dedicated `*Enum` first instead of scattering hard-coded strings across business logic.
+- If a persistence field temporarily stays as `String` or `List<String>` for compatibility or serialization simplicity, its field comment must point to the corresponding `*Enum` as the source of truth.
+- For outward-facing `Vo` models, prefer enum fields over raw `String` or `List<String>` when the value domain is fixed and already defined by a `*Enum`.
+- If a DTO, VO, entity, or other model cannot use the enum type directly, the field comment should include a Javadoc `@see XxxEnum#DESC` reference to the corresponding enum description.
+- New business enums should follow the same structure as `backend/src/main/java/com/stableflow/verification/enums/PaymentTransactionStatusEnum.java`, including `code`, `desc`, `DESC`, `CODE_MAP`, `@EnumValue`, `@JsonValue`, and `fromCode`.
 - When adding new Java classes, prefer `Dto` for inbound data and `Vo` for outbound data consistently across modules.
 
 ## API Modeling
