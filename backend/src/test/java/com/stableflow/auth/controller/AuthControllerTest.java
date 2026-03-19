@@ -2,6 +2,7 @@ package com.stableflow.auth.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -9,7 +10,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stableflow.auth.dto.RegisterRequestDto;
 import com.stableflow.auth.service.AuthService;
+import com.stableflow.auth.vo.CurrentUserVo;
 import com.stableflow.auth.vo.LoginResponseVo;
+import com.stableflow.merchant.enums.MerchantStatusEnum;
 import com.stableflow.system.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -79,5 +82,19 @@ class AuthControllerTest {
             )
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value(40002));
+    }
+
+    @Test
+    void shouldReturnCurrentMerchantInfo() throws Exception {
+        when(authService.me()).thenReturn(
+            new CurrentUserVo(100L, "StableFlow Demo", "demo@stableflow.com", MerchantStatusEnum.ACTIVE)
+        );
+
+        mockMvc.perform(get("/api/auth/me"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.merchantId").value(100L))
+            .andExpect(jsonPath("$.data.merchantName").value("StableFlow Demo"))
+            .andExpect(jsonPath("$.data.email").value("demo@stableflow.com"))
+            .andExpect(jsonPath("$.data.status").value("ACTIVE"));
     }
 }

@@ -10,8 +10,10 @@ import static org.mockito.Mockito.when;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stableflow.auth.dto.LoginRequestDto;
 import com.stableflow.auth.dto.RegisterRequestDto;
+import com.stableflow.auth.vo.CurrentUserVo;
 import com.stableflow.auth.vo.LoginResponseVo;
 import com.stableflow.merchant.entity.Merchant;
+import com.stableflow.merchant.enums.MerchantStatusEnum;
 import com.stableflow.merchant.mapper.MerchantMapper;
 import com.stableflow.system.exception.BusinessException;
 import com.stableflow.system.exception.ErrorCode;
@@ -69,7 +71,7 @@ class AuthServiceImplTest {
 
         assertEquals("StableFlow Demo", savedMerchant.getMerchantName());
         assertEquals("demo@stableflow.com", savedMerchant.getEmail());
-        assertEquals("ACTIVE", savedMerchant.getStatus());
+        assertEquals(MerchantStatusEnum.ACTIVE, savedMerchant.getStatus());
         assertEquals("hashed-password", savedMerchant.getPasswordHash());
         assertNotEquals("Password123", savedMerchant.getPasswordHash());
 
@@ -126,5 +128,25 @@ class AuthServiceImplTest {
         assertEquals("jwt-token", response.accessToken());
         assertEquals("demo@stableflow.com", response.email());
         assertEquals("StableFlow Demo", response.merchantName());
+    }
+
+    @Test
+    void shouldReturnCurrentMerchantProfile() {
+        CurrentMerchant currentMerchant = new CurrentMerchant(12L, "demo@stableflow.com");
+        Merchant merchant = new Merchant();
+        merchant.setId(12L);
+        merchant.setMerchantName("StableFlow Demo");
+        merchant.setEmail("demo@stableflow.com");
+        merchant.setStatus(MerchantStatusEnum.ACTIVE);
+
+        when(currentMerchantProvider.requireCurrentMerchant()).thenReturn(currentMerchant);
+        when(merchantMapper.selectById(12L)).thenReturn(merchant);
+
+        CurrentUserVo response = authService.me();
+
+        assertEquals(12L, response.merchantId());
+        assertEquals("StableFlow Demo", response.merchantName());
+        assertEquals("demo@stableflow.com", response.email());
+        assertEquals(MerchantStatusEnum.ACTIVE, response.status());
     }
 }

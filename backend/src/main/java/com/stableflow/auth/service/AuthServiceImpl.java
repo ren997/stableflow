@@ -6,6 +6,7 @@ import com.stableflow.auth.dto.RegisterRequestDto;
 import com.stableflow.auth.vo.CurrentUserVo;
 import com.stableflow.auth.vo.LoginResponseVo;
 import com.stableflow.merchant.entity.Merchant;
+import com.stableflow.merchant.enums.MerchantStatusEnum;
 import com.stableflow.merchant.mapper.MerchantMapper;
 import com.stableflow.system.exception.BusinessException;
 import com.stableflow.system.exception.ErrorCode;
@@ -40,7 +41,7 @@ public class AuthServiceImpl implements AuthService {
         merchant.setMerchantName(request.merchantName().trim());
         merchant.setEmail(normalizedEmail);
         merchant.setPasswordHash(passwordEncoder.encode(request.password()));
-        merchant.setStatus("ACTIVE");
+        merchant.setStatus(MerchantStatusEnum.ACTIVE);
         merchantMapper.insert(merchant);
 
         return buildLoginResponse(merchant);
@@ -61,7 +62,16 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public CurrentUserVo me() {
         CurrentMerchant currentMerchant = currentMerchantProvider.requireCurrentMerchant();
-        return new CurrentUserVo(currentMerchant.merchantId(), currentMerchant.email());
+        Merchant merchant = merchantMapper.selectById(currentMerchant.merchantId());
+        if (merchant == null) {
+            throw new BusinessException(ErrorCode.MERCHANT_NOT_FOUND);
+        }
+        return new CurrentUserVo(
+            merchant.getId(),
+            merchant.getMerchantName(),
+            merchant.getEmail(),
+            merchant.getStatus()
+        );
     }
 
     private LoginResponseVo buildLoginResponse(Merchant merchant) {

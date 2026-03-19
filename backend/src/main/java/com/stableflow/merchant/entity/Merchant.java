@@ -3,6 +3,7 @@ package com.stableflow.merchant.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.stableflow.merchant.enums.MerchantStatusEnum;
 import java.time.OffsetDateTime;
 import lombok.Data;
 
@@ -25,7 +26,7 @@ public class Merchant {
     private String passwordHash;
 
     /** Merchant status / 商家状态 */
-    private String status;
+    private MerchantStatusEnum status;
 
     /** Record created time in UTC / 记录创建时间（UTC） */
     private OffsetDateTime createdAt;
