@@ -1,6 +1,8 @@
 package com.stableflow.invoice.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.stableflow.blockchain.entity.PaymentTransaction;
 import com.stableflow.blockchain.service.PaymentTransactionService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -14,7 +16,9 @@ import com.stableflow.invoice.vo.InvoiceDetailVo;
 import com.stableflow.invoice.vo.InvoiceListItemVo;
 import com.stableflow.invoice.vo.PaymentInfoVo;
 import com.stableflow.invoice.vo.PaymentStatusVo;
+import com.stableflow.invoice.vo.PublicPaymentPageVo;
 import com.stableflow.merchant.entity.MerchantPaymentConfig;
+import com.stableflow.system.api.PageResult;
 import com.stableflow.merchant.service.MerchantPaymentConfigService;
 import com.stableflow.reconciliation.entity.ReconciliationRecord;
 import com.stableflow.reconciliation.service.ReconciliationRecordService;
@@ -84,7 +88,7 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
     }
 
     @Override
-    public List<InvoiceListItemVo> listInvoices(String status) {
+    public PageResult<InvoiceListItemVo> listInvoices(String status, int page, int size) {
         Long merchantId = currentMerchantProvider.requireCurrentMerchantId();
         LambdaQueryWrapper<Invoice> wrapper = new LambdaQueryWrapper<Invoice>()
             .eq(Invoice::getMerchantId, merchantId)
@@ -96,7 +100,13 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
             }
             wrapper.eq(Invoice::getStatus, statusEnum);
         }
-        return invoiceMapper.selectList(wrapper).stream().map(this::toListItemResponse).toList();
+        IPage<Invoice> pageResult = invoiceMapper.selectPage(new Page<>(page, size), wrapper);
+        return new PageResult<>(
+            pageResult.getRecords().stream().map(this::toListItemResponse).toList(),
+            pageResult.getTotal(),
+            pageResult.getCurrent(),
+            pageResult.getSize()
+        );
     }
 
     @Override
@@ -241,6 +251,34 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
             return latestReconciliationRecord.getProcessedAt();
         }
         return latestTransaction == null ? null : latestTransaction.getBlockTime();
+    }
+
+    @Override
+    public PublicPaymentPageVo getPublicPaymentPage(String publicId) {
+        // 1. 按 publicId 查询账单，不校验商家归属
+        Invoice invoice = invoiceMapper.selectOne(
+            new LambdaQueryWrapper<Invoice>().eq(Invoice::getPublicId, publicId)
+        );
+        if (invoice == null) {
+            throw new BusinessException(ErrorCode.INVOICE_NOT_FOUND);
+        }
+
+        // 2. 获取支付请求快照
+        InvoicePaymentRequest paymentRequest = getPaymentRequest(invoice.getId());
+
+        return new PublicPaymentPageVo(
+            invoice.getPublicId(),
+            invoice.getInvoiceNo(),
+            invoice.getCustomerName(),
+            invoice.getAmount(),
+            invoice.getCurrency(),
+            invoice.getChain(),
+            invoice.getDescription(),
+            invoice.getStatus(),
+            invoice.getExpireAt(),
+            invoice.getPaidAt(),
+            toPaymentInfoResponse(paymentRequest)
+        );
     }
 
     private String encode(String value) {

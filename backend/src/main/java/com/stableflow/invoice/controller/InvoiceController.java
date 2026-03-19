@@ -11,8 +11,8 @@ import com.stableflow.invoice.vo.PaymentStatusVo;
 import com.stableflow.reconciliation.service.PaymentProofService;
 import com.stableflow.reconciliation.vo.PaymentProofVo;
 import com.stableflow.system.api.ApiResponse;
+import com.stableflow.system.api.PageResult;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,8 +39,12 @@ public class InvoiceController {
 
     @GetMapping
     @Operation(summary = "List invoices / 查询账单列表")
-    public ApiResponse<List<InvoiceListItemVo>> listInvoices(@RequestParam(required = false) String status) {
-        return ApiResponse.success(invoiceService.listInvoices(status));
+    public ApiResponse<PageResult<InvoiceListItemVo>> listInvoices(
+        @RequestParam(required = false) String status,
+        @RequestParam(defaultValue = "1") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return ApiResponse.success(invoiceService.listInvoices(status, page, size));
     }
 
     @GetMapping("/{id}")
