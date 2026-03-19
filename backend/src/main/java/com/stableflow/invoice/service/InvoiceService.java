@@ -1,7 +1,9 @@
 package com.stableflow.invoice.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.stableflow.invoice.dto.ActivateInvoiceRequestDto;
 import com.stableflow.invoice.dto.CreateInvoiceRequestDto;
+import com.stableflow.invoice.dto.UpdateInvoiceRequestDto;
 import com.stableflow.invoice.entity.Invoice;
 import com.stableflow.invoice.vo.InvoiceDetailVo;
 import com.stableflow.invoice.vo.InvoiceListItemVo;
@@ -14,6 +16,12 @@ public interface InvoiceService extends IService<Invoice> {
 
     /** Create an invoice and snapshot its payment request / 创建账单并生成支付请求快照 */
     InvoiceDetailVo createInvoice(CreateInvoiceRequestDto request);
+
+    /** Activate a draft invoice into pending payment state / 将草稿账单激活为待支付状态 */
+    InvoiceDetailVo activateInvoice(ActivateInvoiceRequestDto request);
+
+    /** Update an editable invoice owned by the current merchant / 更新当前商家可编辑的账单 */
+    InvoiceDetailVo updateInvoice(UpdateInvoiceRequestDto request);
 
     /** List invoices of the current merchant with pagination and optional status filtering / 分页查询当前商家的账单列表，可按状态过滤 */
     PageResult<InvoiceListItemVo> listInvoices(String status, int page, int size);

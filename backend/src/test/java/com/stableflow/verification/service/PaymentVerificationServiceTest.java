@@ -91,6 +91,19 @@ class PaymentVerificationServiceTest {
     }
 
     @Test
+    void shouldKeepTransactionPendingWhenInvoiceIsDraft() {
+        PaymentTransaction paymentTransaction = transaction(31L, "tx-31", "ref-draft", "10.00", "usdc-mint", utc("2026-03-17T10:00:00Z"));
+        when(invoicePaymentRequestMapper.selectOne(any())).thenReturn(paymentRequest(131L, "ref-draft", "usdc-mint", "10.00", utc("2026-03-18T10:00:00Z")));
+        when(invoiceService.getById(131L)).thenReturn(invoice(131L, InvoiceStatusEnum.DRAFT));
+
+        PaymentVerificationResultVo result = singlePaymentVerificationService.verifyTransaction(paymentTransaction);
+
+        assertEquals(PaymentVerificationResultEnum.PENDING, result.verificationResult());
+        assertEquals(PaymentTransactionStatusEnum.UNMATCHED, result.paymentStatus());
+        assertEquals(null, result.invoiceId());
+    }
+
+    @Test
     void shouldMarkTransactionAsPaidWhenAmountMatches() {
         PaymentTransaction paymentTransaction = transaction(4L, "tx-4", "ref-2", "10.00", "usdc-mint", utc("2026-03-17T10:00:00Z"));
         when(invoicePaymentRequestMapper.selectOne(any())).thenReturn(paymentRequest(101L, "ref-2", "usdc-mint", "10.00", utc("2026-03-18T10:00:00Z")));
@@ -231,9 +244,13 @@ class PaymentVerificationServiceTest {
     }
 
     private Invoice invoice(Long id) {
+        return invoice(id, InvoiceStatusEnum.PENDING);
+    }
+
+    private Invoice invoice(Long id, InvoiceStatusEnum status) {
         Invoice invoice = new Invoice();
         invoice.setId(id);
-        invoice.setStatus(InvoiceStatusEnum.PENDING);
+        invoice.setStatus(status);
         return invoice;
     }
 

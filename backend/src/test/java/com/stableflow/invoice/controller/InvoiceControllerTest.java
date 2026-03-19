@@ -6,8 +6,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stableflow.invoice.dto.ActivateInvoiceRequestDto;
 import com.stableflow.invoice.dto.InvoiceIdQueryDto;
 import com.stableflow.invoice.dto.InvoiceListQueryDto;
+import com.stableflow.invoice.dto.UpdateInvoiceRequestDto;
 import com.stableflow.invoice.enums.ExceptionTagEnum;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import com.stableflow.invoice.service.InvoiceService;
@@ -98,6 +100,46 @@ class InvoiceControllerTest {
                 post("/api/invoices/detail")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(new InvoiceIdQueryDto(1L)))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(1))
+            .andExpect(jsonPath("$.data.invoiceNo").value("INV-001"));
+    }
+
+    @Test
+    void shouldUpdateInvoiceViaPost() throws Exception {
+        when(invoiceService.updateInvoice(org.mockito.ArgumentMatchers.any(UpdateInvoiceRequestDto.class))).thenReturn(invoiceDetailVo());
+
+        mockMvc.perform(
+                post("/api/invoices/update")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new UpdateInvoiceRequestDto(
+                                1L,
+                                "Alice",
+                                new BigDecimal("99.00"),
+                                "USDC",
+                                "SOLANA",
+                                "Monthly fee",
+                                OffsetDateTime.parse("2026-03-21T10:00:00Z")
+                            )
+                        )
+                    )
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(1))
+            .andExpect(jsonPath("$.data.invoiceNo").value("INV-001"));
+    }
+
+    @Test
+    void shouldActivateInvoiceViaPost() throws Exception {
+        when(invoiceService.activateInvoice(org.mockito.ArgumentMatchers.any(ActivateInvoiceRequestDto.class))).thenReturn(invoiceDetailVo());
+
+        mockMvc.perform(
+                post("/api/invoices/activate")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new ActivateInvoiceRequestDto(1L)))
             )
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.id").value(1))

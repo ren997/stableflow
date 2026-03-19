@@ -7,7 +7,9 @@ import com.stableflow.blockchain.entity.PaymentTransaction;
 import com.stableflow.blockchain.service.PaymentTransactionService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.stableflow.invoice.enums.ExceptionTagEnum;
+import com.stableflow.invoice.dto.ActivateInvoiceRequestDto;
 import com.stableflow.invoice.dto.CreateInvoiceRequestDto;
+import com.stableflow.invoice.dto.UpdateInvoiceRequestDto;
 import com.stableflow.invoice.entity.Invoice;
 import com.stableflow.invoice.entity.InvoicePaymentRequest;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
@@ -69,21 +71,69 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
         invoice.setCurrency(normalizeOrDefault(request.currency(), DEFAULT_CURRENCY));
         invoice.setChain(normalizeOrDefault(request.chain(), DEFAULT_CHAIN));
         invoice.setDescription(request.description());
-        invoice.setStatus(InvoiceStatusEnum.PENDING);
+        invoice.setStatus(InvoiceStatusEnum.DRAFT);
         invoice.setExpireAt(request.expireAt());
         invoiceMapper.insert(invoice);
 
-        InvoicePaymentRequest paymentRequest = new InvoicePaymentRequest();
-        paymentRequest.setInvoiceId(invoice.getId());
-        paymentRequest.setRecipientAddress(paymentConfig.getWalletAddress());
-        paymentRequest.setReferenceKey(generateReferenceKey());
-        paymentRequest.setMintAddress(paymentConfig.getMintAddress());
-        paymentRequest.setExpectedAmount(request.amount());
-        paymentRequest.setLabel("StableFlow Invoice");
-        paymentRequest.setMessage(invoice.getInvoiceNo());
-        paymentRequest.setExpireAt(request.expireAt());
-        paymentRequest.setPaymentLink(buildPaymentLink(paymentRequest));
+        InvoicePaymentRequest paymentRequest = buildPaymentRequest(invoice, paymentConfig);
         invoicePaymentRequestMapper.insert(paymentRequest);
+
+        return toDetailResponse(invoice, paymentRequest);
+    }
+
+    @Transactional
+    @Override
+    public InvoiceDetailVo activateInvoice(ActivateInvoiceRequestDto request) {
+        Long merchantId = currentMerchantProvider.requireCurrentMerchantId();
+        Invoice invoice = getOwnedInvoice(request.id());
+        if (invoice.getStatus() != InvoiceStatusEnum.DRAFT) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "Only DRAFT invoices can be activated");
+        }
+
+        MerchantPaymentConfig paymentConfig = merchantPaymentConfigService.getRequiredConfig(merchantId);
+        InvoicePaymentRequest paymentRequest = findPaymentRequest(invoice.getId());
+        if (paymentRequest == null) {
+            paymentRequest = buildPaymentRequest(invoice, paymentConfig);
+            invoicePaymentRequestMapper.insert(paymentRequest);
+        } else {
+            paymentRequest.setRecipientAddress(paymentConfig.getWalletAddress());
+            paymentRequest.setMintAddress(paymentConfig.getMintAddress());
+            paymentRequest.setExpectedAmount(invoice.getAmount());
+            paymentRequest.setLabel("StableFlow Invoice");
+            paymentRequest.setMessage(invoice.getInvoiceNo());
+            paymentRequest.setExpireAt(invoice.getExpireAt());
+            paymentRequest.setPaymentLink(buildPaymentLink(paymentRequest));
+            invoicePaymentRequestMapper.updateById(paymentRequest);
+        }
+
+        invoice.setStatus(InvoiceStatusEnum.PENDING);
+        invoiceMapper.updateById(invoice);
+        return toDetailResponse(invoice, paymentRequest);
+    }
+
+    @Transactional
+    @Override
+    public InvoiceDetailVo updateInvoice(UpdateInvoiceRequestDto request) {
+        Invoice invoice = getOwnedInvoice(request.id());
+        validateEditableInvoice(invoice);
+        InvoicePaymentRequest paymentRequest = findPaymentRequest(invoice.getId());
+
+        invoice.setCustomerName(request.customerName());
+        invoice.setAmount(request.amount());
+        invoice.setCurrency(normalizeOrDefault(request.currency(), DEFAULT_CURRENCY));
+        invoice.setChain(normalizeOrDefault(request.chain(), DEFAULT_CHAIN));
+        invoice.setDescription(request.description());
+        invoice.setExpireAt(request.expireAt());
+
+        invoiceMapper.updateById(invoice);
+
+        if (paymentRequest != null) {
+            paymentRequest.setExpectedAmount(invoice.getAmount());
+            paymentRequest.setPaymentLink(buildPaymentLink(paymentRequest));
+            paymentRequest.setExpireAt(invoice.getExpireAt());
+            paymentRequest.setMessage(invoice.getInvoiceNo());
+            invoicePaymentRequestMapper.updateById(paymentRequest);
+        }
 
         return toDetailResponse(invoice, paymentRequest);
     }
@@ -113,13 +163,14 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
     @Override
     public InvoiceDetailVo getInvoiceDetail(Long invoiceId) {
         Invoice invoice = getOwnedInvoice(invoiceId);
-        InvoicePaymentRequest paymentRequest = getPaymentRequest(invoiceId);
+        InvoicePaymentRequest paymentRequest = findPaymentRequest(invoiceId);
         return toDetailResponse(invoice, paymentRequest);
     }
 
     @Override
     public PaymentInfoVo getPaymentInfo(Long invoiceId) {
         Invoice invoice = getOwnedInvoice(invoiceId);
+        ensureInvoiceActivated(invoice);
         return toPaymentInfoResponse(getPaymentRequest(invoice.getId()));
     }
 
@@ -153,13 +204,17 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
     }
 
     private InvoicePaymentRequest getPaymentRequest(Long invoiceId) {
-        InvoicePaymentRequest paymentRequest = invoicePaymentRequestMapper.selectOne(
-            new LambdaQueryWrapper<InvoicePaymentRequest>().eq(InvoicePaymentRequest::getInvoiceId, invoiceId)
-        );
+        InvoicePaymentRequest paymentRequest = findPaymentRequest(invoiceId);
         if (paymentRequest == null) {
             throw new BusinessException(ErrorCode.INVOICE_NOT_FOUND, "Payment request not found");
         }
         return paymentRequest;
+    }
+
+    private InvoicePaymentRequest findPaymentRequest(Long invoiceId) {
+        return invoicePaymentRequestMapper.selectOne(
+            new LambdaQueryWrapper<InvoicePaymentRequest>().eq(InvoicePaymentRequest::getInvoiceId, invoiceId)
+        );
     }
 
     private InvoiceDetailVo toDetailResponse(Invoice invoice, InvoicePaymentRequest paymentRequest) {
@@ -176,7 +231,7 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
             invoice.getExpireAt(),
             invoice.getPaidAt(),
             invoice.getCreatedAt(),
-            toPaymentInfoResponse(paymentRequest)
+            invoice.getStatus() == InvoiceStatusEnum.DRAFT || paymentRequest == null ? null : toPaymentInfoResponse(paymentRequest)
         );
     }
 
@@ -195,6 +250,9 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
     }
 
     private PaymentInfoVo toPaymentInfoResponse(InvoicePaymentRequest paymentRequest) {
+        if (paymentRequest == null) {
+            return null;
+        }
         return new PaymentInfoVo(
             paymentRequest.getRecipientAddress(),
             paymentRequest.getReferenceKey(),
@@ -216,6 +274,20 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
             + "&message=" + encode(paymentRequest.getMessage());
     }
 
+    private InvoicePaymentRequest buildPaymentRequest(Invoice invoice, MerchantPaymentConfig paymentConfig) {
+        InvoicePaymentRequest paymentRequest = new InvoicePaymentRequest();
+        paymentRequest.setInvoiceId(invoice.getId());
+        paymentRequest.setRecipientAddress(paymentConfig.getWalletAddress());
+        paymentRequest.setReferenceKey(generateReferenceKey());
+        paymentRequest.setMintAddress(paymentConfig.getMintAddress());
+        paymentRequest.setExpectedAmount(invoice.getAmount());
+        paymentRequest.setLabel("StableFlow Invoice");
+        paymentRequest.setMessage(invoice.getInvoiceNo());
+        paymentRequest.setExpireAt(invoice.getExpireAt());
+        paymentRequest.setPaymentLink(buildPaymentLink(paymentRequest));
+        return paymentRequest;
+    }
+
     private String generatePublicId() {
         return "pub_" + UUID.randomUUID().toString().replace("-", "");
     }
@@ -232,6 +304,12 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
 
     private String normalizeOrDefault(String value, String defaultValue) {
         return value == null || value.isBlank() ? defaultValue : value.toUpperCase(Locale.ROOT);
+    }
+
+    private void validateEditableInvoice(Invoice invoice) {
+        if (invoice.getStatus() != InvoiceStatusEnum.DRAFT) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "Only DRAFT invoices can be edited");
+        }
     }
 
     private List<ExceptionTagEnum> normalizeExceptionTags(List<String> exceptionTags) {
@@ -266,6 +344,9 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
         if (invoice == null) {
             throw new BusinessException(ErrorCode.INVOICE_NOT_FOUND);
         }
+        if (invoice.getStatus() == InvoiceStatusEnum.DRAFT) {
+            throw new BusinessException(ErrorCode.INVOICE_NOT_FOUND, "Public payment page is not available for draft invoices");
+        }
 
         // 2. 获取支付请求快照
         InvoicePaymentRequest paymentRequest = getPaymentRequest(invoice.getId());
@@ -287,5 +368,11 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
 
     private String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
+    }
+
+    private void ensureInvoiceActivated(Invoice invoice) {
+        if (invoice.getStatus() == InvoiceStatusEnum.DRAFT) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "Draft invoices do not expose payment info before activation");
+        }
     }
 }

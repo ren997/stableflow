@@ -103,6 +103,14 @@ public class SinglePaymentVerificationServiceImpl implements SinglePaymentVerifi
                 "Reference key points to a missing invoice."
             );
         }
+        if (invoice.getStatus() == com.stableflow.invoice.enums.InvoiceStatusEnum.DRAFT) {
+            return new VerificationDecision(
+                null,
+                PaymentVerificationResultEnum.PENDING,
+                PaymentTransactionStatusEnum.UNMATCHED,
+                "Draft invoice is not active yet and cannot enter payment verification."
+            );
+        }
 
         // 先校验币种，避免错误资产直接进入金额判断。
         if (!matchesMintAddress(paymentTransaction, paymentRequest)) {

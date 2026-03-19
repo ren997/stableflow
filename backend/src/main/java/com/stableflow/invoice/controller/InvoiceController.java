@@ -2,9 +2,11 @@ package com.stableflow.invoice.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.stableflow.invoice.dto.ActivateInvoiceRequestDto;
 import com.stableflow.invoice.dto.CreateInvoiceRequestDto;
 import com.stableflow.invoice.dto.InvoiceIdQueryDto;
 import com.stableflow.invoice.dto.InvoiceListQueryDto;
+import com.stableflow.invoice.dto.UpdateInvoiceRequestDto;
 import com.stableflow.invoice.service.InvoiceService;
 import com.stableflow.invoice.vo.InvoiceDetailVo;
 import com.stableflow.invoice.vo.InvoiceListItemVo;
@@ -34,6 +36,18 @@ public class InvoiceController {
     @Operation(summary = "Create invoice / 创建账单")
     public ApiResponse<InvoiceDetailVo> createInvoice(@Valid @RequestBody CreateInvoiceRequestDto request) {
         return ApiResponse.success(invoiceService.createInvoice(request));
+    }
+
+    @PostMapping("/activate")
+    @Operation(summary = "Activate invoice / 激活账单")
+    public ApiResponse<InvoiceDetailVo> activateInvoice(@Valid @RequestBody ActivateInvoiceRequestDto request) {
+        return ApiResponse.success(invoiceService.activateInvoice(request));
+    }
+
+    @PostMapping("/update")
+    @Operation(summary = "Update invoice / 编辑账单")
+    public ApiResponse<InvoiceDetailVo> updateInvoice(@Valid @RequestBody UpdateInvoiceRequestDto request) {
+        return ApiResponse.success(invoiceService.updateInvoice(request));
     }
 
     @PostMapping("/list")
