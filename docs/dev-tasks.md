@@ -197,7 +197,7 @@
 
 - 优先级：P0
 - 依赖：T201
-- 任务说明：实现账单分页查询与详情查询
+- 任务说明：实现账单列表与详情查询（分页能力由 T1006 单独补充）
 - 交付物：
   - `GET /api/invoices`
   - `GET /api/invoices/{id}`
@@ -431,7 +431,7 @@
 
 ### T501 Dashboard 基础汇总接口
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0
 - 依赖：T403
@@ -443,7 +443,7 @@
 
 ### T502 公共支付页查询接口
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0
 - 依赖：T204
@@ -569,9 +569,11 @@
 
 ---
 
-## 13. 建议的首周开发顺序
+## 13. 历史归档：早期启动建议
 
-如果现在立即开工，建议按下面顺序推进：
+> 以下两节为项目初期编写的启动引导，所列任务大多已完成（M0–M4 P0 全部 DONE，M5 T501/T502/T503 已 DONE）。保留仅供回溯，**新线程请直接查看各任务的实际状态，不要按本节顺序执行**。
+
+### 13.1 早期首周开发顺序（已过时）
 
 1. T001 -> T004
 2. T101 -> T102
@@ -580,15 +582,7 @@
 5. T401 -> T404
 6. T501 -> T503
 
-首周目标不是把所有模块都搭一遍，而是做到：
-
-**从创建 Invoice 到生成 Payment Proof 的主链路可运行、可调试、可演示。**
-
----
-
-## 14. 今日可直接开始的任务
-
-如果你现在就准备进入编码，建议先从这 5 个任务开始：
+### 13.2 早期启动任务（已过时）
 
 1. T001 配置分层与环境变量收口
 2. T003 补充幂等与排障字段
@@ -596,4 +590,548 @@
 4. T102 商家固定收款地址配置接口
 5. T201 创建 Invoice
 
-做到这一步后，再继续推进 payment request 和链上扫描，会最顺。
+---
+
+## 15. 遗漏补充任务
+
+本节为对照 `requirements.md`、`technical-design.md`、`implementation-guide.md` 后发现的任务表遗漏，按类别分组。
+
+### 15.1 后端 API 与功能补充
+
+#### T801 商家注册接口
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T004
+- 任务说明：T101 只覆盖了登录。MVP 阶段优先通过 T1004 种子数据解决首个商家问题；若后续需要支持自助注册，再启用本任务
+- 交付物：
+  - `POST /api/auth/register`
+- 完成标准：
+  - 新商家可以通过注册方式进入系统
+  - 密码使用 BCrypt 哈希存储
+
+#### T802 当前登录用户信息接口
+
+- 状态：`TODO`
+
+- 优先级：P0
+- 依赖：T101
+- 任务说明：前端需要获取当前登录商家信息用于页面展示和权限判断
+- 交付物：
+  - `GET /api/auth/me`
+- 完成标准：
+  - 返回当前商家基本信息（名称、邮箱、状态）
+  - 未登录时返回 401
+
+#### T803 登出接口
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T101
+- 任务说明：补充登出能力，清理 token 或前端状态
+- 交付物：
+  - `POST /api/auth/logout`
+- 完成标准：
+  - 登出后 token 失效或由前端清除
+
+#### T804 Invoice 编辑接口
+
+- 状态：`TODO`
+
+- 优先级：P0
+- 依赖：T201
+- 任务说明：需求文档 8.2 明确要求"编辑账单"，当前任务表完全未覆盖
+- 交付物：
+  - `PUT /api/invoices/{id}`
+- 完成标准：
+  - 仅 `DRAFT` 状态可编辑
+  - 进入 `PENDING` 后禁止修改金额和币种
+  - 仅能编辑当前商家自己的账单
+
+#### T805 手动触发核销接口
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T403
+- 任务说明：技术方案 9.3 中定义了 `POST /api/invoices/{id}/reconcile`，用于异常单重试或手动触发核销
+- 交付物：
+  - `POST /api/invoices/{id}/reconcile`
+- 完成标准：
+  - 可对异常单手动触发重新核销
+  - 操作幂等
+
+#### T806 Dashboard 按状态分布查询
+
+- 状态：`TODO`
+
+- 优先级：P0
+- 依赖：T501
+- 任务说明：技术方案 9.5 中定义了 `GET /api/dashboard/invoices/status`，T501 只覆盖了汇总
+- 交付物：
+  - `GET /api/dashboard/invoices/status`
+- 完成标准：
+  - 返回各状态的账单数量分布
+
+#### T807 Dashboard 异常账单筛选接口
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T501
+- 任务说明：技术方案 9.5 中定义了 `GET /api/dashboard/invoices/exceptions`
+- 交付物：
+  - `GET /api/dashboard/invoices/exceptions`
+- 完成标准：
+  - 支持按异常标签筛选
+  - 返回异常账单列表
+
+#### T808 Dashboard 时间维度聚合
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T501
+- 任务说明：需求 8.6 要求"按日、周、月汇总收款数据"，T501 仅有总量汇总
+- 交付物：
+  - Dashboard 接口支持时间维度聚合参数
+- 完成标准：
+  - 可按日、周、月粒度返回收款趋势数据
+
+#### T809 Invoice 列表按异常标签筛选
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T202
+- 任务说明：T202 只支持按状态筛选，需求 8.6 要求"按异常标签筛选账单"
+- 交付物：
+  - `GET /api/invoices` 增加 `exceptionTag` 筛选参数
+- 完成标准：
+  - 可按异常标签过滤账单列表
+
+#### T810 Agent 对账总结
+
+- 状态：`TODO`
+
+- 优先级：P1
+- 依赖：T501
+- 任务说明：需求 8.7 和技术方案 9.6 均定义了对账总结能力，M7 中缺失此任务
+- 交付物：
+  - `POST /api/agent/reconciliation-summary`
+- 完成标准：
+  - Agent 可基于已验证数据输出对账总结
+  - 结果与 Dashboard 统计口径一致
+
+### 15.2 工程基础补充
+
+#### T811 SpringDoc / Swagger UI 接入
+
+- 状态：`TODO`
+
+- 优先级：P0
+- 依赖：T004
+- 任务说明：技术方案 3.5 明确要求接入 SpringDoc + Swagger UI，用于联调和 Demo 演示
+- 交付物：
+  - SpringDoc 依赖引入与配置
+  - Swagger UI 支持 Bearer JWT 鉴权调试
+- 完成标准：
+  - 启动后可访问 Swagger UI
+  - 受保护接口可通过 Swagger 传入 token 调试
+
+#### T812 CORS 跨域配置
+
+- 状态：`TODO`
+
+- 优先级：P0
+- 依赖：T004
+- 任务说明：`SecurityConfig` 中无 CORS 配置，前端 `localhost:5173` 调后端 `localhost:8080` 会被浏览器拦截
+- 交付物：
+  - SecurityConfig 中添加 `CorsConfigurationSource` Bean
+  - 允许的 origins 从配置文件读取
+- 完成标准：
+  - 前端开发服务器可正常调用后端 API
+  - 生产环境可配置允许的域名
+
+#### T813 Solana RPC 异常重试与降级
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T301
+- 任务说明：系统强依赖 Solana RPC，需要处理超时、限流和节点不可用
+- 交付物：
+  - RPC 调用超时配置
+  - 重试策略（指数退避）
+  - 降级日志与告警
+- 完成标准：
+  - RPC 暂时不可用时不会导致任务全部失败
+  - 重试次数和间隔可配置
+
+### 15.3 前端任务
+
+#### T901 前端登录页
+
+- 状态：`TODO`
+
+- 优先级：P0
+- 依赖：T101
+- 任务说明：实现商家登录页面
+- 交付物：
+  - 登录表单
+  - JWT token 存储与请求拦截
+  - 未登录重定向
+- 完成标准：
+  - 登录成功后可进入后台
+  - token 过期时自动跳转登录页
+
+#### T902 前端收款地址配置页
+
+- 状态：`TODO`
+
+- 优先级：P0
+- 依赖：T102, T901
+- 任务说明：商家可在后台配置和查看固定收款地址
+- 交付物：
+  - 收款地址配置表单
+  - 当前配置展示
+- 完成标准：
+  - 可保存和查看固定收款地址
+
+#### T903 前端 Invoice 列表与创建页
+
+- 状态：`TODO`
+
+- 优先级：P0
+- 依赖：T201, T202, T901
+- 任务说明：商家可在后台创建账单和查看账单列表
+- 交付物：
+  - 账单创建表单
+  - 账单列表页（支持状态筛选和分页）
+- 完成标准：
+  - 可创建账单并跳转详情
+  - 列表可按状态筛选
+
+#### T904 前端 Invoice 详情与支付信息页
+
+- 状态：`TODO`
+
+- 优先级：P0
+- 依赖：T204, T903
+- 任务说明：展示账单详情、支付信息、支付链接和二维码
+- 交付物：
+  - 账单详情展示
+  - 支付信息与二维码展示
+  - 支付状态实时轮询
+- 完成标准：
+  - 商家可查看支付信息并分享给客户
+  - 支付状态可自动刷新
+
+#### T905 前端公共支付页
+
+- 状态：`TODO`
+
+- 优先级：P0
+- 依赖：T502
+- 任务说明：基于 `public_id` 的公开支付页面，面向付款方，无需登录
+- 交付物：
+  - 无需登录的支付信息展示页
+  - 支付金额、地址、二维码展示
+  - 支付状态轮询
+- 完成标准：
+  - 通过支付链接可直接访问
+  - 不暴露内部 ID 和商家敏感信息
+
+#### T906 前端 Dashboard 汇总页
+
+- 状态：`TODO`
+
+- 优先级：P0
+- 依赖：T501, T901
+- 任务说明：商家后台首页，展示核心经营数据
+- 交付物：
+  - 总账单数、已支付数、异常数、收款总额卡片
+  - 状态分布图表
+- 完成标准：
+  - 登录后首页可看到基础汇总数据
+
+#### T907 前端 Payment Proof 展示
+
+- 状态：`TODO`
+
+- 优先级：P0
+- 依赖：T404, T904
+- 任务说明：在账单详情页展示 Payment Proof 信息
+- 交付物：
+  - 交易哈希、reference、验证结果、异常标签展示
+  - 链上浏览器链接
+- 完成标准：
+  - 商家可查看完整支付证据
+
+#### T908 前端异常账单页
+
+- 状态：`TODO`
+
+- 优先级：P1
+- 依赖：T701, T901
+- 任务说明：按异常标签和状态查看异常账单
+- 交付物：
+  - 异常账单列表页
+  - 按异常标签筛选
+- 完成标准：
+  - 可快速定位和查看异常账单
+
+### 15.4 测试执行任务
+
+#### T951 核心单元测试
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T404
+- 任务说明：将第 12.1 节测试清单转化为可执行的单元测试代码
+- 交付物：
+  - `InvoiceStatus` 状态流转测试
+  - `reference_key` 归因规则测试
+  - 金额比较、异常判定、幂等规则测试
+- 完成标准：
+  - 覆盖 12.1 节列出的所有单元测试场景
+  - 测试可在 CI 中自动运行
+
+#### T952 主链路集成测试
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T404
+- 任务说明：将第 12.2 节测试清单转化为可执行的集成测试代码
+- 交付物：
+  - 登录 -> 配置地址 -> 创建 Invoice 集成测试
+  - 扫描 -> 验证 -> 核销集成测试
+  - 少付 / 多付 / 过期到账 / 缺少 reference 等异常场景测试
+- 完成标准：
+  - 覆盖 12.2 节列出的所有集成测试场景
+  - 测试可独立运行、可重复执行
+
+---
+
+## 16. 工程实践遗漏补充
+
+本节为对照实际代码审查后发现的工程实践、安全防护、数据完整性、可运维性等维度的遗漏，不在原始需求和设计文档中，但对 MVP 可用性和生产质量有直接影响。
+
+### 16.1 Bug 修复与数据一致性
+
+#### T1001 修复 Invoice.exceptionTags 类型与 DB JSONB 不匹配
+
+- 状态：`TODO`
+
+- 优先级：P0
+- 依赖：T002
+- 任务说明：数据库 `invoice.exception_tags` 定义为 `JSONB`，但 `Invoice.java` 中是 `String` 类型且使用逗号分隔格式；`ReconciliationRecord.java` 中同一字段是 `JsonNode` + `JacksonTypeHandler`。写入 JSONB 列时逗号分隔字符串不是合法 JSON，可能导致运行时异常
+- 交付物：
+  - `Invoice.java` 中 `exceptionTags` 改为 `JsonNode` + `JacksonTypeHandler`，`@TableName` 加 `autoResultMap = true`
+  - `SingleReconciliationServiceImpl.mergeExceptionTags` 改为操作 `JsonNode`
+  - `InvoiceServiceImpl.splitExceptionTags` 和 `PaymentProofServiceImpl.splitExceptionTags` 适配 `JsonNode`
+- 完成标准：
+  - Invoice 和 ReconciliationRecord 的 exceptionTags 类型和序列化方式统一
+  - 核销写入和账单查询不会因类型不匹配报错
+
+#### T1002 payment_proof 表补充唯一约束
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T002
+- 任务说明：`reconciliation_record` 有 `(invoice_id, tx_hash)` 唯一约束，但 `payment_proof` 表无此约束，`saveIfAbsent` 为"先查再插"非原子操作，并发下可能重复插入
+- 交付物：
+  - 新 Flyway migration 添加 `payment_proof(invoice_id, tx_hash)` 唯一约束
+- 完成标准：
+  - 数据库层面防止同一 invoice + txHash 重复生成凭证
+
+#### T1003 Invoice 并发核销乐观锁
+
+- 状态：`TODO`
+
+- 优先级：P1
+- 依赖：T403
+- 任务说明：同一 invoice 多笔不同 txHash 的交易并发核销时，`updateById` 无版本号控制，可能出现"后写覆盖前写"导致状态不一致
+- 交付物：
+  - Invoice 表新增 `version` 字段的 Flyway migration
+  - `Invoice.java` 添加 `@Version` 注解
+  - MyBatis-Plus 乐观锁插件配置
+- 完成标准：
+  - 并发更新同一 invoice 时，乐观锁冲突可被检测并重试
+
+### 16.2 基础功能补全
+
+#### T1004 种子数据
+
+- 状态：`TODO`
+
+- 优先级：P0
+- 依赖：T002
+- 任务说明：无注册接口且数据库无初始商家，系统连登录都跑不通
+- 交付物：
+  - 新 Flyway migration 插入测试商家（BCrypt 密码哈希）
+- 完成标准：
+  - 应用启动后可用测试账号直接登录
+
+#### T1005 （已合并到 T812）
+
+#### T1006 Invoice 列表分页
+
+- 状态：`DONE`
+
+- 优先级：P0
+- 依赖：T202
+- 任务说明：`listInvoices` 返回全量 `List`，无 page/size 参数，账单量大时前端卡死
+- 交付物：
+  - `GET /api/invoices` 增加 `page`、`size` 参数
+  - 使用 MyBatis-Plus `IPage` 分页
+  - 返回分页结果（列表 + 总数）
+- 完成标准：
+  - 默认分页，支持按页查询
+  - 兼容现有 status 筛选参数
+
+#### T1007 Invoice 取消/作废
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T201
+- 任务说明：商家创建错误账单后无法取消，`InvoiceStatusEnum` 无 `CANCELLED` 状态
+- 交付物：
+  - `InvoiceStatusEnum` 新增 `CANCELLED`
+  - `POST /api/invoices/{id}/cancel`
+- 完成标准：
+  - 仅 `DRAFT` 或 `PENDING` 状态可取消
+  - 已取消账单不会被扫描和核销
+
+#### T1008 Invoice 状态流转集中校验
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T201
+- 任务说明：状态变更逻辑分散在 `InvoiceServiceImpl` 和 `SingleReconciliationServiceImpl`，无 `canTransition(from, to)` 校验，理论上可从 `PAID` 改成 `PARTIALLY_PAID`
+- 交付物：
+  - `InvoiceStatusEnum` 中增加合法流转规则（`allowedTransitions`）
+  - 状态变更处统一调用校验方法
+- 完成标准：
+  - 非法状态流转会抛出异常
+  - 所有状态变更点收敛到统一校验
+
+### 16.3 安全防护
+
+#### T1009 输入校验补全
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T201
+- 任务说明：`CreateInvoiceRequestDto` 中 `customerName` 仅 `@NotBlank` 无 `@Size`，`description` 无长度限制但数据库是 `VARCHAR(512)`，超长输入直接抛数据库异常
+- 交付物：
+  - `customerName` 添加 `@Size(max = 128)`
+  - `description` 添加 `@Size(max = 512)`
+  - `currency`、`chain` 添加 `@Size(max = 16)` / `@Size(max = 32)`
+  - 其他 DTO 同步检查
+- 完成标准：
+  - 输入超长时返回 400 友好提示而非 500 数据库异常
+
+#### T1010 GlobalExceptionHandler 补充 HttpMessageNotReadableException
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T004
+- 任务说明：前端发送格式错误的 JSON（如 amount 传字符串）时进入通用 Exception 处理，返回 500 且可能泄露堆栈信息
+- 交付物：
+  - `GlobalExceptionHandler` 新增 `@ExceptionHandler(HttpMessageNotReadableException.class)`
+  - 返回 400 和友好错误信息
+- 完成标准：
+  - JSON 格式错误不再返回 500
+  - 错误响应不暴露内部堆栈
+
+#### T1011 登录接口限流
+
+- 状态：`TODO`
+
+- 优先级：P1
+- 依赖：T101
+- 任务说明：`/api/auth/login` 无任何限流措施，可被暴力破解密码
+- 交付物：
+  - 基于 Redis 的登录失败次数限制（如同一邮箱 5 次/分钟锁定）
+- 完成标准：
+  - 超过阈值后返回限流提示
+  - 限流窗口可配置
+
+#### T1012 公共支付页接口限流
+
+- 状态：`TODO`
+
+- 优先级：P1
+- 依赖：T502
+- 任务说明：`GET /api/pay/{publicId}` 对外开放无限流，虽然 publicId 使用 UUID 熵足够，但 404 vs 200 的差异仍暴露信息
+- 交付物：
+  - IP 级别限流
+- 完成标准：
+  - 单 IP 高频请求被限制
+
+### 16.4 可观测性与运维
+
+#### T1013 logback-spring.xml 与 traceId 输出
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T004
+- 任务说明：`TraceIdFilter` 已将 traceId 放入 MDC，但项目无 `logback-spring.xml`，使用 Spring Boot 默认日志格式，traceId 实际不会出现在日志中
+- 交付物：
+  - `backend/src/main/resources/logback-spring.xml`
+  - 日志 pattern 中加入 `%X{traceId}`
+- 完成标准：
+  - 每条日志可按 traceId 排查请求链路
+
+#### T1014 JWT 过期时间可配置
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T101
+- 任务说明：`JwtTokenProvider` 中 `TOKEN_TTL = Duration.ofHours(12)` 硬编码，不同环境无法调整
+- 交付物：
+  - `SecurityProperties` 新增 `tokenTtl` 字段
+  - `application.yml` 新增 `stableflow.security.token-ttl` 配置项
+  - `JwtTokenProvider` 从配置读取
+- 完成标准：
+  - JWT 过期时间可通过配置文件或环境变量调整
+
+#### T1015 健康检查端点
+
+- 状态：`TODO`
+
+- 优先级：P1
+- 依赖：T001
+- 任务说明：未引入 `spring-boot-starter-actuator`，容器化部署或负载均衡器需要 `/actuator/health` 做存活探测
+- 交付物：
+  - `pom.xml` 引入 actuator 依赖
+  - `application.yml` 配置暴露 health 和 info 端点
+  - SecurityConfig 放行 `/actuator/**`
+- 完成标准：
+  - `/actuator/health` 可正常返回应用状态
+
+#### T1016 Docker Compose 本地开发环境
+
+- 状态：`TODO`
+
+- 优先级：P1
+- 依赖：T001
+- 任务说明：本地开发需要手动安装 PostgreSQL 和 Redis，新人上手成本高
+- 交付物：
+  - 项目根目录 `docker-compose.yml`
+  - 包含 PostgreSQL 和 Redis 服务
+  - 端口和密码与 `application.yml` 默认值一致
+- 完成标准：
+  - `docker compose up -d` 即可拉起全部依赖服务
