@@ -24,7 +24,7 @@ public class DashboardController {
 
     @PostMapping("/summary")
     @Operation(summary = "Query dashboard summary / 查询仪表盘汇总数据")
-    public ApiResponse<DashboardSummaryVo> getSummary(@Valid @RequestBody DashboardSummaryQueryDto request) {
+    public ApiResponse<DashboardSummaryVo> getSummary(@Valid @RequestBody(required = false) DashboardSummaryQueryDto request) {
         return ApiResponse.success(dashboardService.getSummary());
     }
 

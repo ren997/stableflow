@@ -63,6 +63,17 @@ class DashboardControllerTest {
     }
 
     @Test
+    void shouldAcceptDashboardSummaryPostWithoutBody() throws Exception {
+        when(dashboardService.getSummary()).thenReturn(
+            new DashboardSummaryVo(10L, 6L, 2L, 2L, new BigDecimal("99.50"))
+        );
+
+        mockMvc.perform(post("/api/dashboard/summary"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.totalInvoices").value(10));
+    }
+
+    @Test
     void shouldNotExposeGetDashboardSummaryRoute() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/dashboard/summary"))
             .andExpect(status().isMethodNotAllowed());

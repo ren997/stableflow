@@ -54,7 +54,8 @@ function normalizeStatusCountItems(payload: unknown): DashboardStatusCountItem[]
 
 export function getDashboardSummary(): Promise<DashboardSummary> {
   return request<DashboardSummary>('/dashboard/summary', {
-    method: 'POST'
+    method: 'POST',
+    body: JSON.stringify({})
   });
 }
 
