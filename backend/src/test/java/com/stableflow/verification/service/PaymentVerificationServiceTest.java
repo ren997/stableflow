@@ -66,9 +66,35 @@ class PaymentVerificationServiceTest {
     }
 
     @Test
+    void shouldTreatBlankReferenceAsMissingReference() {
+        PaymentTransaction paymentTransaction = transaction(21L, "tx-21", "   ", "10.00", "usdc-mint", utc("2026-03-17T10:00:00Z"));
+
+        PaymentVerificationResultVo result = singlePaymentVerificationService.verifyTransaction(paymentTransaction);
+
+        assertEquals(PaymentVerificationResultEnum.MISSING_REFERENCE, result.verificationResult());
+        assertEquals(PaymentTransactionStatusEnum.UNMATCHED, result.paymentStatus());
+        assertEquals(null, result.invoiceId());
+    }
+
+    @Test
     void shouldMarkTransactionAsInvalidReference() {
         PaymentTransaction paymentTransaction = transaction(2L, "tx-2", "ref-missing", "10.00", "usdc-mint", utc("2026-03-17T10:00:00Z"));
         when(invoicePaymentRequestMapper.selectOne(any())).thenReturn(null);
+
+        PaymentVerificationResultVo result = singlePaymentVerificationService.verifyTransaction(paymentTransaction);
+
+        assertEquals(PaymentVerificationResultEnum.INVALID_REFERENCE, result.verificationResult());
+        assertEquals(PaymentTransactionStatusEnum.UNMATCHED, result.paymentStatus());
+        assertEquals(null, result.invoiceId());
+    }
+
+    @Test
+    void shouldMarkTransactionAsInvalidReferenceWhenInvoiceBehindReferenceIsMissing() {
+        PaymentTransaction paymentTransaction = transaction(22L, "tx-22", "ref-missing-invoice", "10.00", "usdc-mint", utc("2026-03-17T10:00:00Z"));
+        when(invoicePaymentRequestMapper.selectOne(any())).thenReturn(
+            paymentRequest(122L, "ref-missing-invoice", "usdc-mint", "10.00", utc("2026-03-18T10:00:00Z"))
+        );
+        when(invoiceService.getById(122L)).thenReturn(null);
 
         PaymentVerificationResultVo result = singlePaymentVerificationService.verifyTransaction(paymentTransaction);
 
@@ -164,6 +190,23 @@ class PaymentVerificationServiceTest {
 
         when(invoicePaymentRequestMapper.selectOne(any())).thenReturn(paymentRequest(105L, "ref-6", "usdc-mint", "10.00", utc("2026-03-18T10:00:00Z")));
         when(invoiceService.getById(105L)).thenReturn(invoice(105L));
+        when(paymentTransactionService.list(anyWrapper())).thenReturn(List.of(earlierTransaction));
+
+        PaymentVerificationResultVo result = paymentVerificationService.verifyTransaction(paymentTransaction);
+
+        assertEquals(PaymentVerificationResultEnum.DUPLICATE_PAYMENT, result.verificationResult());
+        assertEquals(PaymentTransactionStatusEnum.DUPLICATE, result.paymentStatus());
+    }
+
+    @Test
+    void shouldMarkTransactionAsDuplicateWhenSameBlockTimeUsesLowerIdAsTieBreaker() {
+        PaymentTransaction paymentTransaction = transaction(81L, "tx-81", "ref-81", "10.00", "usdc-mint", utc("2026-03-17T10:00:00Z"));
+        PaymentTransaction earlierTransaction = transaction(80L, "tx-80", "ref-81", "10.00", "usdc-mint", utc("2026-03-17T10:00:00Z"));
+        earlierTransaction.setInvoiceId(181L);
+        earlierTransaction.setVerificationResult(PaymentVerificationResultEnum.PAID);
+
+        when(invoicePaymentRequestMapper.selectOne(any())).thenReturn(paymentRequest(181L, "ref-81", "usdc-mint", "10.00", utc("2026-03-18T10:00:00Z")));
+        when(invoiceService.getById(181L)).thenReturn(invoice(181L));
         when(paymentTransactionService.list(anyWrapper())).thenReturn(List.of(earlierTransaction));
 
         PaymentVerificationResultVo result = paymentVerificationService.verifyTransaction(paymentTransaction);

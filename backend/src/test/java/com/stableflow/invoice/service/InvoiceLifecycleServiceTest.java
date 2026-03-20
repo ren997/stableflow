@@ -18,6 +18,8 @@ import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import com.stableflow.invoice.mapper.InvoiceMapper;
 import com.stableflow.invoice.mapper.InvoicePaymentRequestMapper;
 import com.stableflow.invoice.vo.InvoiceDetailVo;
+import com.stableflow.invoice.vo.PublicPaymentPageVo;
+import com.stableflow.invoice.vo.PaymentInfoVo;
 import com.stableflow.merchant.entity.MerchantPaymentConfig;
 import com.stableflow.merchant.service.MerchantPaymentConfigService;
 import com.stableflow.reconciliation.service.ReconciliationRecordService;
@@ -131,6 +133,47 @@ class InvoiceLifecycleServiceTest {
 
         assertEquals(ErrorCode.INVALID_REQUEST, exception.getErrorCode());
         assertEquals("Only DRAFT invoices can be activated", exception.getMessage());
+    }
+
+    @Test
+    void shouldRejectDraftPaymentInfoBeforeActivation() {
+        Invoice invoice = draftInvoice(303L);
+
+        when(currentMerchantProvider.requireCurrentMerchantId()).thenReturn(10L);
+        when(invoiceMapper.selectById(303L)).thenReturn(invoice);
+
+        BusinessException exception = assertThrows(BusinessException.class, () -> invoiceService.getPaymentInfo(303L));
+
+        assertEquals(ErrorCode.INVALID_REQUEST, exception.getErrorCode());
+        assertEquals("Draft invoices do not expose payment info before activation", exception.getMessage());
+    }
+
+    @Test
+    void shouldRejectDraftPublicPaymentPageBeforeActivation() {
+        Invoice invoice = draftInvoice(304L);
+
+        when(invoiceMapper.selectOne(any())).thenReturn(invoice);
+
+        BusinessException exception = assertThrows(BusinessException.class, () -> invoiceService.getPublicPaymentPage("pub_304"));
+
+        assertEquals(ErrorCode.INVOICE_NOT_FOUND, exception.getErrorCode());
+        assertEquals("Public payment page is not available for draft invoices", exception.getMessage());
+    }
+
+    @Test
+    void shouldExposePublicPaymentPageAfterActivation() {
+        Invoice invoice = draftInvoice(305L);
+        invoice.setStatus(InvoiceStatusEnum.PENDING);
+        InvoicePaymentRequest paymentRequest = paymentRequest(305L);
+
+        when(invoiceMapper.selectOne(any())).thenReturn(invoice);
+        when(invoicePaymentRequestMapper.selectOne(any())).thenReturn(paymentRequest);
+
+        PublicPaymentPageVo publicPaymentPage = invoiceService.getPublicPaymentPage("pub_305");
+
+        assertEquals("pub_305", publicPaymentPage.publicId());
+        assertEquals(InvoiceStatusEnum.PENDING, publicPaymentPage.status());
+        assertEquals("ref-1", publicPaymentPage.paymentInfo().referenceKey());
     }
 
     private Invoice draftInvoice(Long id) {
