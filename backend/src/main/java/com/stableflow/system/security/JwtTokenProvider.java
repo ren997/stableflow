@@ -18,11 +18,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class JwtTokenProvider {
 
-    private static final Duration TOKEN_TTL = Duration.ofHours(12);
+    private static final Duration DEFAULT_TOKEN_TTL = Duration.ofHours(12);
+
     private final SecretKey signingKey;
+    private final Duration tokenTtl;
 
     public JwtTokenProvider(SecurityProperties securityProperties) {
         this.signingKey = buildSigningKey(securityProperties.jwtSecret());
+        this.tokenTtl = securityProperties.tokenTtl() == null ? DEFAULT_TOKEN_TTL : securityProperties.tokenTtl();
     }
 
     public String generateToken(CurrentMerchant currentMerchant) {
@@ -31,7 +34,7 @@ public class JwtTokenProvider {
             .subject(String.valueOf(currentMerchant.merchantId()))
             .claim("email", currentMerchant.email())
             .issuedAt(Date.from(now))
-            .expiration(Date.from(now.plus(TOKEN_TTL)))
+            .expiration(Date.from(now.plus(tokenTtl)))
             .signWith(signingKey)
             .compact();
     }

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.stableflow.system.config.SecurityProperties;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -18,7 +19,8 @@ class SecurityConfigTest {
     void shouldCreateCorsConfigurationFromSecurityProperties() {
         SecurityProperties securityProperties = new SecurityProperties(
             "change-me-in-env",
-            List.of("http://localhost:5173", "https://merchant.stableflow.com")
+            List.of("http://localhost:5173", "https://merchant.stableflow.com"),
+            Duration.ofHours(12)
         );
 
         CorsConfigurationSource source = securityConfig.corsConfigurationSource(securityProperties);
