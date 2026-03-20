@@ -8,10 +8,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stableflow.dashboard.dto.DashboardExceptionInvoiceQueryDto;
 import com.stableflow.dashboard.dto.DashboardSummaryQueryDto;
+import com.stableflow.dashboard.dto.DashboardSummaryTrendQueryDto;
+import com.stableflow.dashboard.enums.DashboardTimeGranularityEnum;
 import com.stableflow.dashboard.service.DashboardService;
 import com.stableflow.dashboard.vo.DashboardExceptionInvoiceVo;
 import com.stableflow.dashboard.vo.DashboardInvoiceStatusDistributionVo;
 import com.stableflow.dashboard.vo.DashboardSummaryVo;
+import com.stableflow.dashboard.vo.DashboardSummaryTrendVo;
 import com.stableflow.invoice.enums.ExceptionTagEnum;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import com.stableflow.system.api.PageResult;
@@ -76,6 +79,47 @@ class DashboardControllerTest {
         mockMvc.perform(post("/api/dashboard/summary"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.totalInvoices").value(10));
+    }
+
+    @Test
+    void shouldReturnDashboardSummaryTrendViaPost() throws Exception {
+        when(dashboardService.getSummaryTrend(DashboardTimeGranularityEnum.WEEK)).thenReturn(
+            new DashboardSummaryTrendVo(
+                DashboardTimeGranularityEnum.WEEK,
+                List.of(
+                    new DashboardSummaryTrendVo.TrendPoint(
+                        OffsetDateTime.parse("2026-03-16T00:00:00Z"),
+                        new BigDecimal("199.50"),
+                        3L
+                    )
+                )
+            )
+        );
+
+        mockMvc.perform(
+                post("/api/dashboard/summary/trend")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new DashboardSummaryTrendQueryDto(DashboardTimeGranularityEnum.WEEK)
+                        )
+                    )
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.granularity").value("WEEK"))
+            .andExpect(jsonPath("$.data.items[0].totalReceivedAmount").value(199.50))
+            .andExpect(jsonPath("$.data.items[0].transactionCount").value(3));
+    }
+
+    @Test
+    void shouldUseDefaultGranularityForSummaryTrendWhenBodyIsMissing() throws Exception {
+        when(dashboardService.getSummaryTrend(null)).thenReturn(
+            new DashboardSummaryTrendVo(DashboardTimeGranularityEnum.DAY, List.of())
+        );
+
+        mockMvc.perform(post("/api/dashboard/summary/trend"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.granularity").value("DAY"));
     }
 
     @Test

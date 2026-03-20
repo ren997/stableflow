@@ -2,10 +2,12 @@ package com.stableflow.dashboard.controller;
 
 import com.stableflow.dashboard.dto.DashboardExceptionInvoiceQueryDto;
 import com.stableflow.dashboard.dto.DashboardSummaryQueryDto;
+import com.stableflow.dashboard.dto.DashboardSummaryTrendQueryDto;
 import com.stableflow.dashboard.service.DashboardService;
 import com.stableflow.dashboard.vo.DashboardExceptionInvoiceVo;
 import com.stableflow.dashboard.vo.DashboardInvoiceStatusDistributionVo;
 import com.stableflow.dashboard.vo.DashboardSummaryVo;
+import com.stableflow.dashboard.vo.DashboardSummaryTrendVo;
 import com.stableflow.system.api.PageResult;
 import com.stableflow.system.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,6 +37,16 @@ public class DashboardController {
     @Operation(summary = "Query dashboard invoice status distribution / 查询仪表盘账单状态分布")
     public ApiResponse<DashboardInvoiceStatusDistributionVo> getInvoiceStatusDistribution() {
         return ApiResponse.success(dashboardService.getInvoiceStatusDistribution());
+    }
+
+    @PostMapping("/summary/trend")
+    @Operation(summary = "Query dashboard summary trend / 查询仪表盘汇总趋势")
+    public ApiResponse<DashboardSummaryTrendVo> getSummaryTrend(
+        @Valid @RequestBody(required = false) DashboardSummaryTrendQueryDto request
+    ) {
+        return ApiResponse.success(
+            dashboardService.getSummaryTrend(request == null ? null : request.granularity())
+        );
     }
 
     @PostMapping("/invoices/exceptions")

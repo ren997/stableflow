@@ -2,7 +2,6 @@ package com.stableflow.dashboard.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -11,6 +10,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.stableflow.blockchain.mapper.PaymentTransactionMapper;
 import com.stableflow.dashboard.vo.DashboardExceptionInvoiceVo;
 import com.stableflow.dashboard.vo.DashboardInvoiceStatusDistributionVo;
+import com.stableflow.dashboard.enums.DashboardTimeGranularityEnum;
+import com.stableflow.dashboard.vo.DashboardSummaryTrendVo;
 import com.stableflow.invoice.entity.Invoice;
 import com.stableflow.invoice.enums.ExceptionTagEnum;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
@@ -18,8 +19,10 @@ import com.stableflow.invoice.service.InvoiceService;
 import com.stableflow.system.api.PageResult;
 import com.stableflow.system.security.CurrentMerchantProvider;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -69,6 +72,38 @@ class DashboardServiceImplTest {
 
         assertEquals(InvoiceStatusEnum.values().length, response.items().size());
         response.items().forEach(item -> assertEquals(0L, item.count()));
+    }
+
+    @Test
+    void shouldReturnDailySummaryTrendByDefault() {
+        when(currentMerchantProvider.requireCurrentMerchantId()).thenReturn(10L);
+        when(paymentTransactionMapper.listDailyVerifiedTrendByMerchantId(10L)).thenReturn(
+            List.of(
+                Map.of(
+                    "bucketstartat", Timestamp.from(OffsetDateTime.parse("2026-03-20T00:00:00Z").toInstant()),
+                    "totalreceivedamount", new BigDecimal("99.50"),
+                    "transactioncount", 2L
+                )
+            )
+        );
+
+        DashboardSummaryTrendVo response = dashboardService.getSummaryTrend(null);
+
+        assertEquals(DashboardTimeGranularityEnum.DAY, response.granularity());
+        assertEquals(1, response.items().size());
+        assertEquals(new BigDecimal("99.50"), response.items().get(0).totalReceivedAmount());
+        assertEquals(2L, response.items().get(0).transactionCount());
+    }
+
+    @Test
+    void shouldDispatchSummaryTrendByRequestedGranularity() {
+        when(currentMerchantProvider.requireCurrentMerchantId()).thenReturn(10L);
+        when(paymentTransactionMapper.listMonthlyVerifiedTrendByMerchantId(10L)).thenReturn(List.of());
+
+        DashboardSummaryTrendVo response = dashboardService.getSummaryTrend(DashboardTimeGranularityEnum.MONTH);
+
+        assertEquals(DashboardTimeGranularityEnum.MONTH, response.granularity());
+        verify(paymentTransactionMapper).listMonthlyVerifiedTrendByMerchantId(10L);
     }
 
     @Test

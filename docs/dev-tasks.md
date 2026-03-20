@@ -689,13 +689,13 @@
 
 #### T808 Dashboard 时间维度聚合
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0.5
 - 依赖：T501
 - 任务说明：需求 8.6 要求"按日、周、月汇总收款数据"，T501 仅有总量汇总
 - 交付物：
-  - Dashboard 接口支持时间维度聚合参数
+  - `POST /api/dashboard/summary/trend`
 - 完成标准：
   - 可按日、周、月粒度返回收款趋势数据
 
@@ -728,7 +728,7 @@
 
 #### T811 SpringDoc / Swagger UI 接入
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0
 - 依赖：T004

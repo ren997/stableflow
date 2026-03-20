@@ -4,9 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.stableflow.blockchain.mapper.PaymentTransactionMapper;
+import com.stableflow.dashboard.enums.DashboardTimeGranularityEnum;
 import com.stableflow.dashboard.vo.DashboardExceptionInvoiceVo;
 import com.stableflow.dashboard.vo.DashboardInvoiceStatusDistributionVo;
 import com.stableflow.dashboard.vo.DashboardSummaryVo;
+import com.stableflow.dashboard.vo.DashboardSummaryTrendVo;
 import com.stableflow.invoice.entity.Invoice;
 import com.stableflow.invoice.enums.ExceptionTagEnum;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
@@ -14,9 +16,15 @@ import com.stableflow.invoice.service.InvoiceService;
 import com.stableflow.system.api.PageResult;
 import com.stableflow.system.security.CurrentMerchantProvider;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -90,6 +98,21 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
+    public DashboardSummaryTrendVo getSummaryTrend(DashboardTimeGranularityEnum granularity) {
+        Long merchantId = currentMerchantProvider.requireCurrentMerchantId();
+        DashboardTimeGranularityEnum resolvedGranularity = granularity == null ? DashboardTimeGranularityEnum.DAY : granularity;
+        List<Map<String, Object>> rows = switch (resolvedGranularity) {
+            case DAY -> paymentTransactionMapper.listDailyVerifiedTrendByMerchantId(merchantId);
+            case WEEK -> paymentTransactionMapper.listWeeklyVerifiedTrendByMerchantId(merchantId);
+            case MONTH -> paymentTransactionMapper.listMonthlyVerifiedTrendByMerchantId(merchantId);
+        };
+        return new DashboardSummaryTrendVo(
+            resolvedGranularity,
+            rows.stream().map(this::toTrendPoint).toList()
+        );
+    }
+
+    @Override
     public PageResult<DashboardExceptionInvoiceVo> getExceptionInvoices(ExceptionTagEnum exceptionTag, int page, int size) {
         Long merchantId = currentMerchantProvider.requireCurrentMerchantId();
         LambdaQueryWrapper<Invoice> query = merchantQuery(merchantId)
@@ -143,5 +166,29 @@ public class DashboardServiceImpl implements DashboardService {
             .map(ExceptionTagEnum::fromCode)
             .filter(Objects::nonNull)
             .toList();
+    }
+
+    private DashboardSummaryTrendVo.TrendPoint toTrendPoint(Map<String, Object> row) {
+        return new DashboardSummaryTrendVo.TrendPoint(
+            toOffsetDateTime(row.get("bucketstartat")),
+            row.get("totalreceivedamount") instanceof BigDecimal amount ? amount : BigDecimal.ZERO,
+            row.get("transactioncount") instanceof Number count ? count.longValue() : 0L
+        );
+    }
+
+    private OffsetDateTime toOffsetDateTime(Object value) {
+        if (value instanceof OffsetDateTime offsetDateTime) {
+            return offsetDateTime;
+        }
+        if (value instanceof Timestamp timestamp) {
+            return timestamp.toInstant().atOffset(ZoneOffset.UTC);
+        }
+        if (value instanceof LocalDateTime localDateTime) {
+            return localDateTime.atOffset(ZoneOffset.UTC);
+        }
+        if (value instanceof Instant instant) {
+            return instant.atOffset(ZoneOffset.UTC);
+        }
+        return null;
     }
 }
