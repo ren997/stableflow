@@ -2,12 +2,14 @@ package com.stableflow.dashboard.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.stableflow.blockchain.mapper.PaymentTransactionMapper;
+import com.stableflow.dashboard.vo.DashboardInvoiceStatusDistributionVo;
 import com.stableflow.dashboard.vo.DashboardSummaryVo;
 import com.stableflow.invoice.entity.Invoice;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import com.stableflow.invoice.service.InvoiceService;
 import com.stableflow.system.security.CurrentMerchantProvider;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -67,6 +69,18 @@ public class DashboardServiceImpl implements DashboardService {
             exceptionCount,
             totalReceivedAmount
         );
+    }
+
+    @Override
+    public DashboardInvoiceStatusDistributionVo getInvoiceStatusDistribution() {
+        Long merchantId = currentMerchantProvider.requireCurrentMerchantId();
+        List<DashboardInvoiceStatusDistributionVo.StatusCountItem> items = Arrays.stream(InvoiceStatusEnum.values())
+            .map(status -> new DashboardInvoiceStatusDistributionVo.StatusCountItem(
+                status,
+                invoiceService.count(merchantQuery(merchantId).eq(Invoice::getStatus, status))
+            ))
+            .toList();
+        return new DashboardInvoiceStatusDistributionVo(items);
     }
 
     private LambdaQueryWrapper<Invoice> merchantQuery(Long merchantId) {

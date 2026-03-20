@@ -2,6 +2,7 @@ package com.stableflow.dashboard.controller;
 
 import com.stableflow.dashboard.dto.DashboardSummaryQueryDto;
 import com.stableflow.dashboard.service.DashboardService;
+import com.stableflow.dashboard.vo.DashboardInvoiceStatusDistributionVo;
 import com.stableflow.dashboard.vo.DashboardSummaryVo;
 import com.stableflow.system.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,5 +26,11 @@ public class DashboardController {
     @Operation(summary = "Query dashboard summary / 查询仪表盘汇总数据")
     public ApiResponse<DashboardSummaryVo> getSummary(@Valid @RequestBody DashboardSummaryQueryDto request) {
         return ApiResponse.success(dashboardService.getSummary());
+    }
+
+    @PostMapping("/invoices/status")
+    @Operation(summary = "Query dashboard invoice status distribution / 查询仪表盘账单状态分布")
+    public ApiResponse<DashboardInvoiceStatusDistributionVo> getInvoiceStatusDistribution() {
+        return ApiResponse.success(dashboardService.getInvoiceStatusDistribution());
     }
 }

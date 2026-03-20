@@ -8,9 +8,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stableflow.dashboard.dto.DashboardSummaryQueryDto;
 import com.stableflow.dashboard.service.DashboardService;
+import com.stableflow.dashboard.vo.DashboardInvoiceStatusDistributionVo;
 import com.stableflow.dashboard.vo.DashboardSummaryVo;
+import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import com.stableflow.system.exception.GlobalExceptionHandler;
 import java.math.BigDecimal;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,6 +65,31 @@ class DashboardControllerTest {
     @Test
     void shouldNotExposeGetDashboardSummaryRoute() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/dashboard/summary"))
+            .andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
+    void shouldReturnInvoiceStatusDistributionViaPost() throws Exception {
+        when(dashboardService.getInvoiceStatusDistribution()).thenReturn(
+            new DashboardInvoiceStatusDistributionVo(
+                List.of(
+                    new DashboardInvoiceStatusDistributionVo.StatusCountItem(InvoiceStatusEnum.DRAFT, 1L),
+                    new DashboardInvoiceStatusDistributionVo.StatusCountItem(InvoiceStatusEnum.PENDING, 2L),
+                    new DashboardInvoiceStatusDistributionVo.StatusCountItem(InvoiceStatusEnum.PAID, 3L)
+                )
+            )
+        );
+
+        mockMvc.perform(post("/api/dashboard/invoices/status"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items[0].status").value("DRAFT"))
+            .andExpect(jsonPath("$.data.items[1].count").value(2))
+            .andExpect(jsonPath("$.data.items[2].status").value("PAID"));
+    }
+
+    @Test
+    void shouldNotExposeGetInvoiceStatusDistributionRoute() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/dashboard/invoices/status"))
             .andExpect(status().isMethodNotAllowed());
     }
 }

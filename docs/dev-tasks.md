@@ -664,13 +664,13 @@
 
 #### T806 Dashboard 按状态分布查询
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0
 - 依赖：T501
 - 任务说明：技术方案 9.5 中定义了 `GET /api/dashboard/invoices/status`，T501 只覆盖了汇总
 - 交付物：
-  - `GET /api/dashboard/invoices/status`
+  - `POST /api/dashboard/invoices/status`
 - 完成标准：
   - 返回各状态的账单数量分布
 
