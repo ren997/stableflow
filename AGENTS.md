@@ -108,7 +108,11 @@ For a fresh thread, use this workflow:
 
 - Use the format `<type>(<module>): <主题>`.
 - Keep the `type` compatible with Conventional Commits, such as `feat`, `fix`, `refactor`, `docs`, `test`, or `chore`.
-- Prefer a short module scope such as `blockchain`, `invoice`, `merchant`, `auth`, `frontend`, `docs`, or `repo`.
+- Default to business-oriented commits instead of splitting by frontend/backend technical layers.
+- Prefer a short business scope such as `blockchain`, `invoice`, `merchant`, `auth`, `dashboard`, `agent`, `docs`, or `repo`.
+- When a commit spans both frontend and backend for one business capability, keep a single business-oriented commit and mention the affected side in the subject when helpful, for example `前后端联通`, `后端接口`, or `前端页面`.
+- When a change only affects one side, the subject should say so clearly, for example `补齐登出后端接口` or `新增注册前端页面`.
+- Only split frontend and backend into separate commits when they are intentionally independent for review, rollback, or delivery timing.
 - Prefer Chinese for the subject; English is optional when it improves clarity for reviewers.
 - Example: `refactor(blockchain): 重构 Solana RPC 交易解析`
 - Optional bilingual example: `refactor(blockchain): 重构 Solana RPC 交易解析 / Refactor Solana RPC transaction parsing`
