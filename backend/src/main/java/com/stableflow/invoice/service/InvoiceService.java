@@ -38,4 +38,7 @@ public interface InvoiceService extends IService<Invoice> {
 
     /** Return public payment page info by publicId, no auth required / 基于 publicId 返回公共支付页信息，无需登录 */
     PublicPaymentPageVo getPublicPaymentPage(String publicId);
+
+    /** Expire pending invoices that have passed their effective window / 将超过有效期的待支付账单更新为已过期 */
+    int expirePendingInvoices();
 }

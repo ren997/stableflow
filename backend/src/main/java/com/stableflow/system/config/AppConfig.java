@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
     PaymentProperties.class,
     SolanaProperties.class,
     SolanaScanProperties.class,
+    InvoiceExpireJobProperties.class,
     PaymentVerifyProperties.class,
     ReconciliationJobProperties.class
 })

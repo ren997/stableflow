@@ -3,9 +3,13 @@ package com.stableflow.invoice.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.stableflow.blockchain.entity.PaymentTransaction;
 import com.stableflow.blockchain.service.PaymentTransactionService;
 import com.stableflow.invoice.entity.Invoice;
@@ -186,6 +190,23 @@ class InvoiceServiceImplTest {
         assertEquals(1, response.records().size());
         assertEquals("INV-105", response.records().get(0).invoiceNo());
         assertEquals(InvoiceStatusEnum.EXPIRED, response.records().get(0).status());
+    }
+
+    @Test
+    void shouldExpireOverduePendingInvoices() {
+        Invoice firstInvoice = invoice(106L, 10L, InvoiceStatusEnum.PENDING, null, null);
+        firstInvoice.setExpireAt(utc("2026-03-18T10:00:00Z"));
+        Invoice secondInvoice = invoice(107L, 10L, InvoiceStatusEnum.PENDING, null, null);
+        secondInvoice.setExpireAt(utc("2026-03-18T10:05:00Z"));
+
+        when(invoiceMapper.selectList(any())).thenReturn(List.of(firstInvoice, secondInvoice));
+        when(invoiceMapper.update(isNull(), any(UpdateWrapper.class))).thenReturn(1);
+
+        int expiredCount = invoiceService.expirePendingInvoices();
+
+        assertEquals(2, expiredCount);
+        verify(invoiceMapper).selectList(any());
+        verify(invoiceMapper, times(2)).update(isNull(), any(UpdateWrapper.class));
     }
 
     private Invoice invoice(

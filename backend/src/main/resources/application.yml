@@ -60,6 +60,11 @@ stableflow:
       initial-delay-ms: ${SOLANA_SCAN_INITIAL_DELAY_MS:10000}
   agent:
     api-key: ${AGENT_API_KEY:replace-me}
+  invoice:
+    expire-job:
+      enabled: ${INVOICE_EXPIRE_JOB_ENABLED:true}
+      fixed-delay-ms: ${INVOICE_EXPIRE_JOB_FIXED_DELAY_MS:30000}
+      initial-delay-ms: ${INVOICE_EXPIRE_JOB_INITIAL_DELAY_MS:12000}
   verification:
     job:
       enabled: ${PAYMENT_VERIFY_ENABLED:true}

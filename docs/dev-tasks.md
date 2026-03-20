@@ -414,7 +414,7 @@
 
 ### T405 `InvoiceExpireJob`
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0.5
 - 依赖：T201

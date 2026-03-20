@@ -1,6 +1,7 @@
 package com.stableflow.invoice.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.stableflow.blockchain.entity.PaymentTransaction;
@@ -38,6 +39,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +48,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> implements InvoiceService {
 
+    private static final Logger log = LoggerFactory.getLogger(InvoiceServiceImpl.class);
     private static final String DEFAULT_CHAIN = "SOLANA";
     private static final String DEFAULT_CURRENCY = "USDC";
 
@@ -377,5 +381,45 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
         if (invoice.getStatus() == InvoiceStatusEnum.DRAFT) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "Draft invoices do not expose payment info before activation");
         }
+    }
+
+    @Transactional
+    @Override
+    public int expirePendingInvoices() {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+
+        // 只挑选已经到期、仍处于待支付且尚未落最终支付时间的账单，避免误伤已完成核销的记录。
+        List<Invoice> expiredCandidates = invoiceMapper.selectList(
+            new LambdaQueryWrapper<Invoice>()
+                .eq(Invoice::getStatus, InvoiceStatusEnum.PENDING)
+                .isNull(Invoice::getPaidAt)
+                .isNotNull(Invoice::getExpireAt)
+                .le(Invoice::getExpireAt, now)
+                .orderByAsc(Invoice::getExpireAt)
+        );
+
+        int expiredCount = 0;
+        for (Invoice invoice : expiredCandidates) {
+            // 逐条按当前状态做条件更新，避免任务与并发支付处理直接互相覆盖。
+            int updatedRows = invoiceMapper.update(
+                null,
+                new UpdateWrapper<Invoice>()
+                    .eq("id", invoice.getId())
+                    .eq("status", InvoiceStatusEnum.PENDING.getCode())
+                    .isNull("paid_at")
+                    .isNotNull("expire_at")
+                    .le("expire_at", now)
+                    .set("status", InvoiceStatusEnum.EXPIRED.getCode())
+            );
+            expiredCount += updatedRows;
+        }
+
+        log.info(
+            "Invoice expiration sweep finished, now={}, candidateCount={}, expiredCount={}",
+            now,
+            expiredCandidates.size(),
+            expiredCount
+        );
+        return expiredCount;
     }
 }
