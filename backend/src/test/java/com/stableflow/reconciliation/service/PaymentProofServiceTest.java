@@ -31,6 +31,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DuplicateKeyException;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentProofServiceTest {
@@ -151,6 +152,23 @@ class PaymentProofServiceTest {
             reconciliationRecord(),
             InvoiceStatusEnum.PAID,
             null,
+            utc("2026-03-17T10:00:00Z")
+        );
+
+        assertFalse(saved);
+    }
+
+    @Test
+    void shouldReturnFalseWhenConcurrentInsertHitsUniqueConstraint() {
+        when(paymentProofMapper.selectCount(any())).thenReturn(0L);
+        when(paymentProofMapper.insert(any(PaymentProof.class))).thenThrow(new DuplicateKeyException("duplicate"));
+
+        boolean saved = paymentProofService.saveIfAbsent(
+            invoice(),
+            paymentTransaction(),
+            reconciliationRecord(),
+            InvoiceStatusEnum.PAID,
+            List.of("LATE_PAYMENT"),
             utc("2026-03-17T10:00:00Z")
         );
 

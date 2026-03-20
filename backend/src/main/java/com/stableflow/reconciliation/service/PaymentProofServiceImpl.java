@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -85,8 +86,13 @@ public class PaymentProofServiceImpl extends ServiceImpl<PaymentProofMapper, Pay
                 )
             )
         );
-        paymentProofMapper.insert(paymentProof);
-        return true;
+        try {
+            paymentProofMapper.insert(paymentProof);
+            return true;
+        } catch (DuplicateKeyException exception) {
+            // Another concurrent reconciliation already persisted the same proof.
+            return false;
+        }
     }
 
     @Override
