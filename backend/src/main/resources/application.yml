@@ -51,6 +51,8 @@ stableflow:
     usdc-mint-address: ${SOLANA_USDC_MINT:replace-me}
     connect-timeout: ${SOLANA_CONNECT_TIMEOUT:3s}
     read-timeout: ${SOLANA_READ_TIMEOUT:10s}
+    retry-max-attempts: ${SOLANA_RETRY_MAX_ATTEMPTS:3}
+    retry-delay: ${SOLANA_RETRY_DELAY:500ms}
     scan:
       enabled: ${SOLANA_SCAN_ENABLED:true}
       batch-size: ${SOLANA_SCAN_BATCH_SIZE:50}

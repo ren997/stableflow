@@ -45,7 +45,16 @@ public class PaymentScanServiceImpl implements PaymentScanService {
         int totalInserted = 0;
         // 只扫描启用中的商家收款地址，先把 MVP 主链路收敛在有效配置上。
         for (MerchantPaymentConfig paymentConfig : merchantPaymentConfigService.listActiveConfigs()) {
-            totalInserted += scanRecipientAddress(paymentConfig);
+            try {
+                totalInserted += scanRecipientAddress(paymentConfig);
+            } catch (RuntimeException ex) {
+                log.error(
+                    "Skipping failed recipientAddress={} for merchantId={} due to scan error",
+                    paymentConfig.getWalletAddress(),
+                    paymentConfig.getMerchantId(),
+                    ex
+                );
+            }
         }
         return totalInserted;
     }

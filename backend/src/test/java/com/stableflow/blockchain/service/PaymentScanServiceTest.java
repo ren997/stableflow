@@ -3,6 +3,7 @@ package com.stableflow.blockchain.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,6 +17,8 @@ import com.stableflow.merchant.entity.MerchantPaymentConfig;
 import com.stableflow.merchant.service.MerchantPaymentConfigService;
 import com.stableflow.system.config.SolanaProperties;
 import com.stableflow.system.config.SolanaScanProperties;
+import com.stableflow.system.exception.BusinessException;
+import com.stableflow.system.exception.ErrorCode;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -46,7 +49,9 @@ class PaymentScanServiceTest {
         "http://localhost:8899",
         "usdc-mint-1",
         java.time.Duration.ofSeconds(3),
-        java.time.Duration.ofSeconds(10)
+        java.time.Duration.ofSeconds(10),
+        3,
+        java.time.Duration.ofMillis(500)
     );
 
     private final SolanaScanProperties solanaScanProperties = new SolanaScanProperties(
@@ -128,6 +133,43 @@ class PaymentScanServiceTest {
 
         assertEquals(0, insertedCount);
         verify(paymentScanCursorService).updateCursor("merchant-wallet-2", "sig-current");
+    }
+
+    @Test
+    void shouldSkipFailedAddressAndContinueScanningRemainingAddresses() {
+        MerchantPaymentConfig failedConfig = new MerchantPaymentConfig();
+        failedConfig.setMerchantId(1L);
+        failedConfig.setWalletAddress("merchant-wallet-failed");
+
+        MerchantPaymentConfig successfulConfig = new MerchantPaymentConfig();
+        successfulConfig.setMerchantId(2L);
+        successfulConfig.setWalletAddress("merchant-wallet-success");
+
+        PaymentScanCursor failedCursor = new PaymentScanCursor();
+        failedCursor.setRecipientAddress("merchant-wallet-failed");
+
+        PaymentScanCursor successCursor = new PaymentScanCursor();
+        successCursor.setRecipientAddress("merchant-wallet-success");
+
+        when(merchantPaymentConfigService.listActiveConfigs()).thenReturn(List.of(failedConfig, successfulConfig));
+        when(paymentScanCursorService.getOrCreate("merchant-wallet-failed")).thenReturn(failedCursor);
+        when(paymentScanCursorService.getOrCreate("merchant-wallet-success")).thenReturn(successCursor);
+        when(solanaClient.getSignaturesForAddress("merchant-wallet-failed", 2, null)).thenThrow(
+            new BusinessException(ErrorCode.BLOCKCHAIN_RPC_TIMEOUT, "timeout")
+        );
+        when(solanaClient.getSignaturesForAddress("merchant-wallet-success", 2, null)).thenReturn(
+            List.of(signature("sig-success"))
+        );
+        when(solanaClient.getTransaction("sig-success")).thenReturn(
+            detail("sig-success", "ref-success", "usdc-mint-1", "{\"slot\":99}")
+        );
+        when(paymentTransactionService.saveIfAbsent(any(PaymentTransaction.class))).thenReturn(true);
+
+        int insertedCount = paymentScanService.scanAllActiveAddresses();
+
+        assertEquals(1, insertedCount);
+        verify(paymentScanCursorService, never()).updateCursor("merchant-wallet-failed", null);
+        verify(paymentScanCursorService).updateCursor("merchant-wallet-success", "sig-success");
     }
 
     private SolanaTransactionSignatureVo signature(String signature) {

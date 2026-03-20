@@ -8,6 +8,8 @@ public record SolanaProperties(
     String rpcUrl,
     String usdcMintAddress,
     Duration connectTimeout,
-    Duration readTimeout
+    Duration readTimeout,
+    Integer retryMaxAttempts,
+    Duration retryDelay
 ) {
 }
