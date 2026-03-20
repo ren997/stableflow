@@ -1041,7 +1041,7 @@
 
 #### T1010 GlobalExceptionHandler 补充 HttpMessageNotReadableException
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0.5
 - 依赖：T004

@@ -1,11 +1,13 @@
 package com.stableflow.system.exception;
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.stableflow.system.api.ApiResponse;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -30,6 +32,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleConstraintViolationException(ConstraintViolationException ex) {
         return ResponseEntity.badRequest().body(ApiResponse.error(ErrorCode.INVALID_REQUEST.getCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+        String message = "Malformed request body";
+        Throwable cause = ex.getMostSpecificCause();
+        if (cause instanceof InvalidFormatException invalidFormatException
+            && !invalidFormatException.getPath().isEmpty()
+            && invalidFormatException.getPath().getLast().getFieldName() != null) {
+            message = "Invalid value for field: " + invalidFormatException.getPath().getLast().getFieldName();
+        }
+        return ResponseEntity.badRequest().body(ApiResponse.error(ErrorCode.INVALID_REQUEST.getCode(), message));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

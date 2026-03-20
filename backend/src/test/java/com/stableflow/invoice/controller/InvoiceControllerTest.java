@@ -161,6 +161,29 @@ class InvoiceControllerTest {
     }
 
     @Test
+    void shouldReturnBadRequestWhenInvoiceAmountTypeIsInvalid() throws Exception {
+        mockMvc.perform(
+                post("/api/invoices")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                          "customerName": "Alice",
+                          "amount": "not-a-number",
+                          "currency": "USDC",
+                          "chain": "SOLANA",
+                          "description": "Monthly fee",
+                          "expireAt": "2026-03-21T10:00:00Z"
+                        }
+                        """
+                    )
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(40002))
+            .andExpect(jsonPath("$.message").value("Invalid value for field: amount"));
+    }
+
+    @Test
     void shouldActivateInvoiceViaPost() throws Exception {
         when(invoiceService.activateInvoice(org.mockito.ArgumentMatchers.any(ActivateInvoiceRequestDto.class))).thenReturn(invoiceDetailVo());
 
