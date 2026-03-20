@@ -60,6 +60,7 @@ public class InvoiceController {
         return ApiResponse.success(
             invoiceService.listInvoices(
                 request.status(),
+                request.exceptionTag(),
                 request.page() == null ? 1 : request.page(),
                 request.size() == null ? 20 : request.size()
             )

@@ -701,13 +701,13 @@
 
 #### T809 Invoice 列表按异常标签筛选
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0.5
 - 依赖：T202
 - 任务说明：T202 只支持按状态筛选，需求 8.6 要求"按异常标签筛选账单"
 - 交付物：
-  - `GET /api/invoices` 增加 `exceptionTag` 筛选参数
+  - `POST /api/invoices/list` 增加 `exceptionTag` 筛选参数
 - 完成标准：
   - 可按异常标签过滤账单列表
 

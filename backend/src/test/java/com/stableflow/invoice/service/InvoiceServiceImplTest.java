@@ -2,8 +2,10 @@ package com.stableflow.invoice.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.stableflow.blockchain.entity.PaymentTransaction;
 import com.stableflow.blockchain.service.PaymentTransactionService;
 import com.stableflow.invoice.entity.Invoice;
@@ -166,6 +168,24 @@ class InvoiceServiceImplTest {
         BusinessException exception = assertThrows(BusinessException.class, () -> invoiceService.getPaymentStatus(104L));
 
         assertEquals(ErrorCode.INVOICE_NOT_FOUND, exception.getErrorCode());
+    }
+
+    @Test
+    void shouldApplyStatusAndExceptionTagFiltersWhenListingInvoices() {
+        Invoice invoice = invoice(105L, 10L, InvoiceStatusEnum.EXPIRED, List.of("LATE_PAYMENT"), null);
+        Page<Invoice> page = new Page<>(2, 10);
+        page.setRecords(List.of(invoice));
+        page.setTotal(1L);
+
+        when(currentMerchantProvider.requireCurrentMerchantId()).thenReturn(10L);
+        when(invoiceMapper.selectPage(any(Page.class), any())).thenReturn(page);
+
+        var response = invoiceService.listInvoices("EXPIRED", ExceptionTagEnum.LATE_PAYMENT, 2, 10);
+
+        assertEquals(1L, response.total());
+        assertEquals(1, response.records().size());
+        assertEquals("INV-105", response.records().get(0).invoiceNo());
+        assertEquals(InvoiceStatusEnum.EXPIRED, response.records().get(0).status());
     }
 
     private Invoice invoice(

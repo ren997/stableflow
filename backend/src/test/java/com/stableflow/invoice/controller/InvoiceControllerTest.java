@@ -68,14 +68,14 @@ class InvoiceControllerTest {
 
     @Test
     void shouldListInvoicesViaPost() throws Exception {
-        when(invoiceService.listInvoices("PENDING", 2, 10)).thenReturn(
+        when(invoiceService.listInvoices("PENDING", ExceptionTagEnum.LATE_PAYMENT, 2, 10)).thenReturn(
             new PageResult<>(List.of(invoiceListItemVo()), 1, 2, 10)
         );
 
         mockMvc.perform(
                 post("/api/invoices/list")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(new InvoiceListQueryDto("PENDING", 2, 10)))
+                    .content(objectMapper.writeValueAsString(new InvoiceListQueryDto("PENDING", ExceptionTagEnum.LATE_PAYMENT, 2, 10)))
             )
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.records[0].invoiceNo").value("INV-001"))
@@ -84,14 +84,14 @@ class InvoiceControllerTest {
 
     @Test
     void shouldUseDefaultPaginationWhenQueryDtoOmitsPageAndSize() throws Exception {
-        when(invoiceService.listInvoices(null, 1, 20)).thenReturn(
+        when(invoiceService.listInvoices(null, null, 1, 20)).thenReturn(
             new PageResult<>(List.of(), 0, 1, 20)
         );
 
         mockMvc.perform(
                 post("/api/invoices/list")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(new InvoiceListQueryDto(null, null, null)))
+                    .content(objectMapper.writeValueAsString(new InvoiceListQueryDto(null, null, null, null)))
             )
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.page").value(1))

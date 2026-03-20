@@ -139,7 +139,7 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
     }
 
     @Override
-    public PageResult<InvoiceListItemVo> listInvoices(String status, int page, int size) {
+    public PageResult<InvoiceListItemVo> listInvoices(String status, ExceptionTagEnum exceptionTag, int page, int size) {
         Long merchantId = currentMerchantProvider.requireCurrentMerchantId();
         LambdaQueryWrapper<Invoice> wrapper = new LambdaQueryWrapper<Invoice>()
             .eq(Invoice::getMerchantId, merchantId)
@@ -150,6 +150,9 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
                 throw new BusinessException(ErrorCode.INVALID_REQUEST, "Unsupported invoice status: " + status);
             }
             wrapper.eq(Invoice::getStatus, statusEnum);
+        }
+        if (exceptionTag != null) {
+            wrapper.apply("exception_tags @> CAST({0} AS jsonb)", "[\"" + exceptionTag.getCode() + "\"]");
         }
         IPage<Invoice> pageResult = invoiceMapper.selectPage(new Page<>(page, size), wrapper);
         return new PageResult<>(

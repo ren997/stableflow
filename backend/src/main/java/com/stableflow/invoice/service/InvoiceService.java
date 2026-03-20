@@ -5,6 +5,7 @@ import com.stableflow.invoice.dto.ActivateInvoiceRequestDto;
 import com.stableflow.invoice.dto.CreateInvoiceRequestDto;
 import com.stableflow.invoice.dto.UpdateInvoiceRequestDto;
 import com.stableflow.invoice.entity.Invoice;
+import com.stableflow.invoice.enums.ExceptionTagEnum;
 import com.stableflow.invoice.vo.InvoiceDetailVo;
 import com.stableflow.invoice.vo.InvoiceListItemVo;
 import com.stableflow.invoice.vo.PaymentInfoVo;
@@ -23,8 +24,8 @@ public interface InvoiceService extends IService<Invoice> {
     /** Update an editable invoice owned by the current merchant / 更新当前商家可编辑的账单 */
     InvoiceDetailVo updateInvoice(UpdateInvoiceRequestDto request);
 
-    /** List invoices of the current merchant with pagination and optional status filtering / 分页查询当前商家的账单列表，可按状态过滤 */
-    PageResult<InvoiceListItemVo> listInvoices(String status, int page, int size);
+    /** List invoices of the current merchant with pagination and optional status/exception-tag filtering / 分页查询当前商家的账单列表，可按状态和异常标签过滤 */
+    PageResult<InvoiceListItemVo> listInvoices(String status, ExceptionTagEnum exceptionTag, int page, int size);
 
     /** Return invoice detail owned by the current merchant / 返回当前商家拥有的账单详情 */
     InvoiceDetailVo getInvoiceDetail(Long invoiceId);
