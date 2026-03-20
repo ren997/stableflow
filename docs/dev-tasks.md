@@ -1082,7 +1082,7 @@
 
 #### T1013 logback-spring.xml 与 traceId 输出
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0.5
 - 依赖：T004
