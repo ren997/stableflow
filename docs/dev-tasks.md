@@ -676,13 +676,13 @@
 
 #### T807 Dashboard 异常账单筛选接口
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0.5
 - 依赖：T501
 - 任务说明：技术方案 9.5 中定义了 `GET /api/dashboard/invoices/exceptions`
 - 交付物：
-  - `GET /api/dashboard/invoices/exceptions`
+  - `POST /api/dashboard/invoices/exceptions`
 - 完成标准：
   - 支持按异常标签筛选
   - 返回异常账单列表
