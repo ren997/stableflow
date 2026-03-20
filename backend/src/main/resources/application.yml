@@ -58,6 +58,9 @@ stableflow:
       batch-size: ${SOLANA_SCAN_BATCH_SIZE:50}
       fixed-delay-ms: ${SOLANA_SCAN_FIXED_DELAY_MS:30000}
       initial-delay-ms: ${SOLANA_SCAN_INITIAL_DELAY_MS:10000}
+      lock-enabled: ${SOLANA_SCAN_LOCK_ENABLED:true}
+      lock-key: ${SOLANA_SCAN_LOCK_KEY:stableflow:job:payment-scan:lock}
+      lock-ttl: ${SOLANA_SCAN_LOCK_TTL:5m}
   agent:
     api-key: ${AGENT_API_KEY:replace-me}
   invoice:

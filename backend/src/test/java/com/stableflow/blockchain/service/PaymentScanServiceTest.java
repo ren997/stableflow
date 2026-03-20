@@ -58,7 +58,10 @@ class PaymentScanServiceTest {
         true,
         2,
         30_000L,
-        10_000L
+        10_000L,
+        true,
+        "stableflow:job:payment-scan:lock",
+        java.time.Duration.ofMinutes(5)
     );
 
     private PaymentScanService paymentScanService;
