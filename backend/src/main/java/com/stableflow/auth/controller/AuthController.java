@@ -36,6 +36,13 @@ public class AuthController {
         return ApiResponse.success(authService.login(request));
     }
 
+    @PostMapping("/logout")
+    @Operation(summary = "Merchant logout / 商家登出")
+    public ApiResponse<Void> logout() {
+        authService.logout();
+        return ApiResponse.success();
+    }
+
     @PostMapping("/me")
     @Operation(summary = "Query current merchant info / 查询当前商家信息")
     public ApiResponse<CurrentUserVo> me(@Valid @RequestBody CurrentUserRequestDto request) {

@@ -1,6 +1,7 @@
 package com.stableflow.auth.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -13,6 +14,8 @@ import com.stableflow.auth.service.AuthService;
 import com.stableflow.auth.vo.CurrentUserVo;
 import com.stableflow.auth.vo.LoginResponseVo;
 import com.stableflow.merchant.enums.MerchantStatusEnum;
+import com.stableflow.system.exception.BusinessException;
+import com.stableflow.system.exception.ErrorCode;
 import com.stableflow.system.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,7 +65,9 @@ class AuthControllerTest {
             )
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.accessToken").value("jwt-token"))
-            .andExpect(jsonPath("$.data.email").value("demo@stableflow.com"));
+            .andExpect(jsonPath("$.data.merchantId").value(100L))
+            .andExpect(jsonPath("$.data.email").value("demo@stableflow.com"))
+            .andExpect(jsonPath("$.data.merchantName").value("StableFlow Demo"));
     }
 
     @Test
@@ -85,6 +90,25 @@ class AuthControllerTest {
     }
 
     @Test
+    void shouldReturnBusinessErrorWhenRegisteringDuplicateEmail() throws Exception {
+        when(authService.register(any(RegisterRequestDto.class)))
+            .thenThrow(new BusinessException(ErrorCode.EMAIL_ALREADY_REGISTERED));
+
+        mockMvc.perform(
+                post("/api/auth/register")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new RegisterRequestDto("StableFlow Demo", "demo@stableflow.com", "Password123")
+                        )
+                    )
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(40003))
+            .andExpect(jsonPath("$.message").value("Email already registered"));
+    }
+
+    @Test
     void shouldReturnCurrentMerchantInfo() throws Exception {
         when(authService.me()).thenReturn(
             new CurrentUserVo(100L, "StableFlow Demo", "demo@stableflow.com", MerchantStatusEnum.ACTIVE)
@@ -100,6 +124,15 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.data.merchantName").value("StableFlow Demo"))
             .andExpect(jsonPath("$.data.email").value("demo@stableflow.com"))
             .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+    }
+
+    @Test
+    void shouldAcknowledgeLogout() throws Exception {
+        mockMvc.perform(post("/api/auth/logout"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data").doesNotExist());
+
+        verify(authService).logout();
     }
 
     @Test

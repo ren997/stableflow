@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -148,5 +149,15 @@ class AuthServiceImplTest {
         assertEquals("StableFlow Demo", response.merchantName());
         assertEquals("demo@stableflow.com", response.email());
         assertEquals(MerchantStatusEnum.ACTIVE, response.status());
+    }
+
+    @Test
+    void shouldRequireCurrentMerchantWhenLoggingOut() {
+        CurrentMerchant currentMerchant = new CurrentMerchant(12L, "demo@stableflow.com");
+        when(currentMerchantProvider.requireCurrentMerchant()).thenReturn(currentMerchant);
+
+        authService.logout();
+
+        verify(currentMerchantProvider, times(1)).requireCurrentMerchant();
     }
 }

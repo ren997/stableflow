@@ -60,6 +60,11 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public void logout() {
+        currentMerchantProvider.requireCurrentMerchant();
+    }
+
+    @Override
     public CurrentUserVo me() {
         CurrentMerchant currentMerchant = currentMerchantProvider.requireCurrentMerchant();
         Merchant merchant = merchantMapper.selectById(currentMerchant.merchantId());
