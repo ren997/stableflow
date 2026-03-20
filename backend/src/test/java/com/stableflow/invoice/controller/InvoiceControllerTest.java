@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stableflow.invoice.dto.ActivateInvoiceRequestDto;
 import com.stableflow.invoice.dto.InvoiceIdQueryDto;
 import com.stableflow.invoice.dto.InvoiceListQueryDto;
+import com.stableflow.invoice.dto.ReconcileInvoiceRequestDto;
 import com.stableflow.invoice.dto.UpdateInvoiceRequestDto;
 import com.stableflow.invoice.enums.ExceptionTagEnum;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
@@ -18,7 +19,9 @@ import com.stableflow.invoice.vo.InvoiceListItemVo;
 import com.stableflow.invoice.vo.PaymentInfoVo;
 import com.stableflow.invoice.vo.PaymentStatusVo;
 import com.stableflow.reconciliation.service.PaymentProofService;
+import com.stableflow.reconciliation.service.ReconciliationService;
 import com.stableflow.reconciliation.vo.PaymentProofVo;
+import com.stableflow.reconciliation.vo.ReconcileInvoiceVo;
 import com.stableflow.system.api.PageResult;
 import com.stableflow.system.exception.GlobalExceptionHandler;
 import com.stableflow.verification.enums.PaymentTransactionStatusEnum;
@@ -45,6 +48,9 @@ class InvoiceControllerTest {
     @Mock
     private PaymentProofService paymentProofService;
 
+    @Mock
+    private ReconciliationService reconciliationService;
+
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
 
@@ -53,7 +59,7 @@ class InvoiceControllerTest {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new InvoiceController(invoiceService, paymentProofService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new InvoiceController(invoiceService, paymentProofService, reconciliationService))
             .setControllerAdvice(new GlobalExceptionHandler())
             .setValidator(validator)
             .build();
@@ -185,6 +191,23 @@ class InvoiceControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.txHash").value("tx-001"))
             .andExpect(jsonPath("$.data.exceptionTags[0]").value("LATE_PAYMENT"));
+    }
+
+    @Test
+    void shouldTriggerManualReconcileViaPost() throws Exception {
+        when(reconciliationService.reconcileInvoice(1L)).thenReturn(
+            new ReconcileInvoiceVo(1L, 1, paymentStatusVo())
+        );
+
+        mockMvc.perform(
+                post("/api/invoices/reconcile")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new ReconcileInvoiceRequestDto(1L)))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.invoiceId").value(1L))
+            .andExpect(jsonPath("$.data.reconciledCount").value(1))
+            .andExpect(jsonPath("$.data.paymentStatus.status").value("PAID"));
     }
 
     @Test

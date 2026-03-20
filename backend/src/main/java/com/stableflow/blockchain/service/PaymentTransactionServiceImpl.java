@@ -90,6 +90,22 @@ public class PaymentTransactionServiceImpl
     }
 
     @Override
+    public List<PaymentTransaction> listPendingReconciliationTransactionsByInvoiceId(Long invoiceId) {
+        if (invoiceId == null) {
+            return List.of();
+        }
+        List<PaymentTransaction> candidates = paymentTransactionMapper.selectList(
+            new LambdaQueryWrapper<PaymentTransaction>()
+                .eq(PaymentTransaction::getInvoiceId, invoiceId)
+                .ne(PaymentTransaction::getVerificationResult, PaymentVerificationResultEnum.PENDING)
+                .orderByAsc(PaymentTransaction::getId)
+        );
+        return candidates.stream()
+            .filter(candidate -> !reconciliationRecordService.existsByInvoiceIdAndTxHash(invoiceId, candidate.getTxHash()))
+            .toList();
+    }
+
+    @Override
     public PaymentTransaction getLatestTransactionByInvoiceId(Long invoiceId) {
         if (invoiceId == null) {
             return null;

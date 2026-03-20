@@ -2,6 +2,10 @@ package com.stableflow.reconciliation.service;
 
 import com.stableflow.blockchain.entity.PaymentTransaction;
 import com.stableflow.blockchain.service.PaymentTransactionService;
+import com.stableflow.invoice.vo.PaymentStatusVo;
+import com.stableflow.invoice.service.InvoiceService;
+import com.stableflow.reconciliation.vo.ReconcileInvoiceVo;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +19,7 @@ public class ReconciliationServiceImpl implements ReconciliationService {
 
     private final PaymentTransactionService paymentTransactionService;
     private final SingleReconciliationService singleReconciliationService;
+    private final InvoiceService invoiceService;
 
     @Override
     public int reconcilePendingTransactions(int limit) {
@@ -36,5 +41,34 @@ public class ReconciliationServiceImpl implements ReconciliationService {
             }
         }
         return processedCount;
+    }
+
+    @Override
+    public ReconcileInvoiceVo reconcileInvoice(Long invoiceId) {
+        // 先校验账单归属，避免手动重放越权到账单外。
+        PaymentStatusVo currentStatus = invoiceService.getPaymentStatus(invoiceId);
+        List<PaymentTransaction> pendingTransactions = paymentTransactionService.listPendingReconciliationTransactionsByInvoiceId(invoiceId);
+        if (pendingTransactions.isEmpty()) {
+            return new ReconcileInvoiceVo(invoiceId, 0, currentStatus);
+        }
+
+        int processedCount = 0;
+        // 对当前账单的待核销交易逐笔补跑，保持与定时任务一致的单笔幂等语义。
+        for (PaymentTransaction paymentTransaction : pendingTransactions) {
+            try {
+                if (singleReconciliationService.reconcileTransaction(paymentTransaction)) {
+                    processedCount++;
+                }
+            } catch (RuntimeException ex) {
+                log.error(
+                    "Failed to manually reconcile invoiceId={}, paymentTransactionId={}, txHash={}",
+                    invoiceId,
+                    paymentTransaction.getId(),
+                    paymentTransaction.getTxHash(),
+                    ex
+                );
+            }
+        }
+        return new ReconcileInvoiceVo(invoiceId, processedCount, invoiceService.getPaymentStatus(invoiceId));
     }
 }

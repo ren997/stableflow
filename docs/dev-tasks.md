@@ -651,13 +651,13 @@
 
 #### T805 手动触发核销接口
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0.5
 - 依赖：T403
 - 任务说明：技术方案 9.3 中定义了 `POST /api/invoices/{id}/reconcile`，用于异常单重试或手动触发核销
 - 交付物：
-  - `POST /api/invoices/{id}/reconcile`
+  - `POST /api/invoices/reconcile`
 - 完成标准：
   - 可对异常单手动触发重新核销
   - 操作幂等

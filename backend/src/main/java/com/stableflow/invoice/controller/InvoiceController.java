@@ -6,6 +6,7 @@ import com.stableflow.invoice.dto.ActivateInvoiceRequestDto;
 import com.stableflow.invoice.dto.CreateInvoiceRequestDto;
 import com.stableflow.invoice.dto.InvoiceIdQueryDto;
 import com.stableflow.invoice.dto.InvoiceListQueryDto;
+import com.stableflow.invoice.dto.ReconcileInvoiceRequestDto;
 import com.stableflow.invoice.dto.UpdateInvoiceRequestDto;
 import com.stableflow.invoice.service.InvoiceService;
 import com.stableflow.invoice.vo.InvoiceDetailVo;
@@ -13,6 +14,8 @@ import com.stableflow.invoice.vo.InvoiceListItemVo;
 import com.stableflow.invoice.vo.PaymentInfoVo;
 import com.stableflow.invoice.vo.PaymentStatusVo;
 import com.stableflow.reconciliation.service.PaymentProofService;
+import com.stableflow.reconciliation.service.ReconciliationService;
+import com.stableflow.reconciliation.vo.ReconcileInvoiceVo;
 import com.stableflow.reconciliation.vo.PaymentProofVo;
 import com.stableflow.system.api.ApiResponse;
 import com.stableflow.system.api.PageResult;
@@ -31,6 +34,7 @@ public class InvoiceController {
 
     private final InvoiceService invoiceService;
     private final PaymentProofService paymentProofService;
+    private final ReconciliationService reconciliationService;
 
     @PostMapping
     @Operation(summary = "Create invoice / 创建账单")
@@ -84,5 +88,11 @@ public class InvoiceController {
     @Operation(summary = "Query invoice payment proof / 查询账单支付凭证")
     public ApiResponse<PaymentProofVo> getPaymentProof(@Valid @RequestBody InvoiceIdQueryDto request) {
         return ApiResponse.success(paymentProofService.getLatestProof(request.id()));
+    }
+
+    @PostMapping("/reconcile")
+    @Operation(summary = "Manual reconcile invoice / 手动触发账单核销")
+    public ApiResponse<ReconcileInvoiceVo> reconcileInvoice(@Valid @RequestBody ReconcileInvoiceRequestDto request) {
+        return ApiResponse.success(reconciliationService.reconcileInvoice(request.id()));
     }
 }
