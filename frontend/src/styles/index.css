@@ -89,6 +89,18 @@ body {
   color: var(--accent);
 }
 
+.auth-switch {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.auth-switch a {
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
 .dashboard-hero {
   display: flex;
   gap: 16px;
@@ -143,5 +155,9 @@ body {
 
   .auth-card {
     margin-left: 0;
+  }
+
+  .auth-switch {
+    flex-direction: column;
   }
 }

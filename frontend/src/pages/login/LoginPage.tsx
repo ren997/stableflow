@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Button, Card, Col, Form, Input, Row, Space, Typography, message } from 'antd';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { login, type LoginRequest } from '../../services/auth';
-import { getAccessToken, setAccessToken, setMerchantSession } from '../../services/session';
+import { getAccessToken, setAuthenticatedMerchantSession } from '../../services/session';
 
 const loginBullets = ['Fixed address billing', 'Reference-based reconciliation', 'Dashboard-ready workflow'];
 
@@ -14,12 +14,7 @@ export function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: login,
     onSuccess: (data) => {
-      setAccessToken(data.accessToken);
-      setMerchantSession({
-        merchantId: data.merchantId,
-        merchantName: data.merchantName,
-        email: data.email
-      });
+      setAuthenticatedMerchantSession(data);
       message.success('Welcome back');
       navigate('/dashboard', { replace: true });
     }
@@ -92,6 +87,10 @@ export function LoginPage() {
                 Sign in
               </Button>
             </Form>
+            <div className="auth-switch">
+              <Typography.Text type="secondary">New to StableFlow?</Typography.Text>
+              <Link to="/register">Create account</Link>
+            </div>
           </Card>
         </Col>
       </Row>

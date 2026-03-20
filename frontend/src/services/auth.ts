@@ -5,6 +5,12 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface RegisterRequest {
+  merchantName: string;
+  email: string;
+  password: string;
+}
+
 export interface LoginResponse {
   accessToken: string;
   tokenType: string;
@@ -15,6 +21,13 @@ export interface LoginResponse {
 
 export function login(requestBody: LoginRequest): Promise<LoginResponse> {
   return request<LoginResponse>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(requestBody)
+  });
+}
+
+export function register(requestBody: RegisterRequest): Promise<LoginResponse> {
+  return request<LoginResponse>('/auth/register', {
     method: 'POST',
     body: JSON.stringify(requestBody)
   });

@@ -4,6 +4,10 @@ export interface MerchantSession {
   email: string;
 }
 
+export interface AuthenticatedMerchantSession extends MerchantSession {
+  accessToken: string;
+}
+
 const ACCESS_TOKEN_KEY = 'stableflow.accessToken';
 const MERCHANT_SESSION_KEY = 'stableflow.merchantSession';
 
@@ -30,6 +34,15 @@ export function getMerchantSession(): MerchantSession | null {
 
 export function setMerchantSession(session: MerchantSession): void {
   localStorage.setItem(MERCHANT_SESSION_KEY, JSON.stringify(session));
+}
+
+export function setAuthenticatedMerchantSession(session: AuthenticatedMerchantSession): void {
+  setAccessToken(session.accessToken);
+  setMerchantSession({
+    merchantId: session.merchantId,
+    merchantName: session.merchantName,
+    email: session.email
+  });
 }
 
 export function clearSession(): void {

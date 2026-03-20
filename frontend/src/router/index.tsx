@@ -3,6 +3,7 @@ import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react
 import { clearSession, getAccessToken } from '../services/session';
 import { DashboardPage } from '../pages/dashboard/DashboardPage';
 import { LoginPage } from '../pages/login/LoginPage';
+import { RegisterPage } from '../pages/register/RegisterPage';
 
 function RequireAuth() {
   const location = useLocation();
@@ -42,6 +43,7 @@ export function AppRouter() {
     <Routes>
       <Route element={<PublicOnlyRoute />}>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
       </Route>
       <Route element={<RequireAuth />}>
         <Route path="/dashboard" element={<DashboardPage />} />

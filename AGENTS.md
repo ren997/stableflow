@@ -47,6 +47,7 @@ For a fresh thread, use this workflow:
 
 - Prioritize the MVP payment closure over extensions: payment proof, payment status, dashboard, public payment page, expiration handling, and job stability are typically more important than Agent features at this stage.
 - Prefer backend completion of the main payment workflow before doing broad frontend polish.
+- Frontend copy should default to English for the current MVP. Do not introduce bilingual UI or an i18n framework unless the user explicitly asks for it.
 - If README files conflict with code or `docs/dev-tasks.md`, trust the code and `docs/dev-tasks.md` first because some README notes may lag behind implementation progress.
 
 ## Naming
