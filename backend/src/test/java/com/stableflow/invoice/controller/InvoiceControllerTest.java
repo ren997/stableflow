@@ -139,6 +139,28 @@ class InvoiceControllerTest {
     }
 
     @Test
+    void shouldRejectCreateInvoiceWhenDescriptionExceedsDatabaseLimit() throws Exception {
+        mockMvc.perform(
+                post("/api/invoices")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new com.stableflow.invoice.dto.CreateInvoiceRequestDto(
+                                "Alice",
+                                new BigDecimal("99.00"),
+                                "USDC",
+                                "SOLANA",
+                                "x".repeat(513),
+                                OffsetDateTime.parse("2026-03-21T10:00:00Z")
+                            )
+                        )
+                    )
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(40002));
+    }
+
+    @Test
     void shouldActivateInvoiceViaPost() throws Exception {
         when(invoiceService.activateInvoice(org.mockito.ArgumentMatchers.any(ActivateInvoiceRequestDto.class))).thenReturn(invoiceDetailVo());
 

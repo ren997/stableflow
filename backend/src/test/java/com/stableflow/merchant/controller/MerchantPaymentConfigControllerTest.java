@@ -77,6 +77,21 @@ class MerchantPaymentConfigControllerTest {
     }
 
     @Test
+    void shouldRejectPaymentConfigWhenChainExceedsDatabaseLimit() throws Exception {
+        mockMvc.perform(
+                post("/api/merchant/payment-config")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new MerchantPaymentConfigRequestDto("wallet-1", "mint-1", "S".repeat(33))
+                        )
+                    )
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(40002));
+    }
+
+    @Test
     void shouldNotExposeGetCurrentConfigRoute() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/merchant/payment-config"))
             .andExpect(status().isMethodNotAllowed());

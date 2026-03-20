@@ -90,6 +90,24 @@ class AuthControllerTest {
     }
 
     @Test
+    void shouldRejectLoginRequestWhenPasswordExceedsMaxLength() throws Exception {
+        mockMvc.perform(
+                post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                          "email": "demo@stableflow.com",
+                          "password": "%s"
+                        }
+                        """.formatted("x".repeat(65))
+                    )
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(40002));
+    }
+
+    @Test
     void shouldReturnBusinessErrorWhenRegisteringDuplicateEmail() throws Exception {
         when(authService.register(any(RegisterRequestDto.class)))
             .thenThrow(new BusinessException(ErrorCode.EMAIL_ALREADY_REGISTERED));
