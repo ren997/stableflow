@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -31,6 +32,7 @@ public class RpcHttpClient {
     private final int retryMaxAttempts;
     private final Duration retryDelay;
 
+    @Autowired
     public RpcHttpClient(SolanaProperties solanaProperties) {
         this(
             buildRestClient(solanaProperties),

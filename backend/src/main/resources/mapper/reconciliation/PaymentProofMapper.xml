@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stableflow.reconciliation.mapper.PaymentProofMapper">
+
+    <insert id="insertJsonb">
+        INSERT INTO payment_proof (
+            invoice_id,
+            tx_hash,
+            proof_type,
+            proof_payload
+        ) VALUES (
+            #{invoiceId},
+            #{txHash},
+            #{proofType},
+            CAST(#{proofPayloadJson} AS jsonb)
+        )
+    </insert>
+</mapper>

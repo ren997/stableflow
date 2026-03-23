@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import lombok.Data;
+import org.apache.ibatis.type.JdbcType;
 
 /** Merchant invoice aggregate that represents the payable business order / 表示商家应收业务订单的账单聚合实体 */
 @Data
@@ -51,7 +52,7 @@ public class Invoice {
     /** Exception tag code list stored as JSON array / 以 JSON 数组存储的异常标签编码列表
      *  @see ExceptionTagEnum#DESC
      */
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @TableField(typeHandler = JacksonTypeHandler.class, jdbcType = JdbcType.OTHER)
     private List<String> exceptionTags;
 
     /** Invoice expiry time in UTC / 账单过期时间（UTC） */

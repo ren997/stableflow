@@ -1,0 +1,34 @@
+spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+
+logging:
+  level:
+    root: WARN
+    com.stableflow: INFO
+
+stableflow:
+  security:
+    jwt-secret: change-me-in-test
+    allowed-origins:
+      - http://localhost:5173
+    token-ttl: 12h
+  payment:
+    public-base-url: http://localhost:5173
+  solana:
+    rpc-url: https://api.devnet.solana.com
+    usdc-mint-address: usdc-mint-test
+    scan:
+      enabled: false
+  invoice:
+    expire-job:
+      enabled: false
+  verification:
+    job:
+      enabled: false
+  reconciliation:
+    job:
+      enabled: false

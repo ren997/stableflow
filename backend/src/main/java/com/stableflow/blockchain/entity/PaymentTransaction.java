@@ -11,6 +11,7 @@ import com.stableflow.verification.enums.PaymentVerificationResultEnum;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import lombok.Data;
+import org.apache.ibatis.type.JdbcType;
 
 /** Candidate on-chain payment transaction discovered before verification / 支付验证前通过链上扫描发现的候选支付交易实体 */
 @Data
@@ -55,7 +56,7 @@ public class PaymentTransaction {
     private PaymentTransactionStatusEnum paymentStatus;
 
     /** Raw blockchain payload stored as JSON / 以 JSON 形式保存的原始链上载荷 */
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @TableField(typeHandler = JacksonTypeHandler.class, jdbcType = JdbcType.OTHER)
     private JsonNode rawPayload;
 
     /** Record created time in UTC / 记录创建时间（UTC） */

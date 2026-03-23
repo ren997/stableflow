@@ -87,7 +87,12 @@ public class PaymentProofServiceImpl extends ServiceImpl<PaymentProofMapper, Pay
             )
         );
         try {
-            paymentProofMapper.insert(paymentProof);
+            paymentProofMapper.insertJsonb(
+                paymentProof.getInvoiceId(),
+                paymentProof.getTxHash(),
+                paymentProof.getProofType().getCode(),
+                paymentProof.getProofPayload().toString()
+            );
             return true;
         } catch (DuplicateKeyException exception) {
             // Another concurrent reconciliation already persisted the same proof.

@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.stableflow.reconciliation.enums.ReconciliationStatusEnum;
 import java.time.OffsetDateTime;
 import lombok.Data;
+import org.apache.ibatis.type.JdbcType;
 
 /** Reconciliation record created after a verified transaction is consumed by invoice state updates / 已验证交易被核销并更新账单状态后生成的核销记录实体 */
 @Data
@@ -32,7 +33,7 @@ public class ReconciliationRecord {
     private String resultMessage;
 
     /** Exception tag list stored as JSON / 以 JSON 形式存储的异常标签列表 */
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @TableField(typeHandler = JacksonTypeHandler.class, jdbcType = JdbcType.OTHER)
     private JsonNode exceptionTags;
 
     /** Reconciliation processed time in UTC / 核销处理时间（UTC） */

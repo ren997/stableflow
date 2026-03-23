@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.stableflow.reconciliation.enums.PaymentProofTypeEnum;
 import java.time.OffsetDateTime;
 import lombok.Data;
+import org.apache.ibatis.type.JdbcType;
 
 /** Snapshot record that stores invoice-level payment proof details / 存储账单级支付证明详情的快照实体 */
 @Data
@@ -29,7 +30,7 @@ public class PaymentProof {
     private PaymentProofTypeEnum proofType;
 
     /** Structured proof payload stored as JSON / 以 JSON 形式存储的结构化凭证载荷 */
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @TableField(typeHandler = JacksonTypeHandler.class, jdbcType = JdbcType.OTHER)
     private JsonNode proofPayload;
 
     /** Record created time in UTC / 记录创建时间（UTC） */
