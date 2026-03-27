@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Card, Col, Empty, Row, Spin, Statistic, Tag, Typography, message } from 'antd';
+import { Button, Card, Col, Empty, Row, Space, Spin, Statistic, Tag, Typography, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
   getDashboardStatusDistribution,
@@ -93,7 +93,12 @@ export function DashboardPage() {
             Track invoice health, payment progress, and reconciliation outcomes from one place.
           </Typography.Paragraph>
         </div>
-        <Button onClick={logout}>Log out</Button>
+        <Space wrap>
+          <Button type="primary" onClick={() => navigate('/settings/payment-config')}>
+            Payment config
+          </Button>
+          <Button onClick={logout}>Log out</Button>
+        </Space>
       </div>
 
       <Row gutter={[16, 16]} className="summary-grid">

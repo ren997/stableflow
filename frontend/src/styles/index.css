@@ -142,6 +142,27 @@ body {
   margin-top: 16px;
 }
 
+.payment-config-form-card,
+.payment-config-current-card,
+.payment-config-tip-card {
+  height: 100%;
+}
+
+.payment-config-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.payment-config-current-card .ant-descriptions-item-label,
+.payment-config-current-card .ant-descriptions-item-content {
+  word-break: break-all;
+}
+
+.payment-config-tip-card {
+  margin-top: 16px;
+}
+
 @media (max-width: 768px) {
   .auth-shell,
   .dashboard-shell {

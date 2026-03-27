@@ -3,6 +3,7 @@ import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react
 import { clearSession, getAccessToken } from '../services/session';
 import { DashboardPage } from '../pages/dashboard/DashboardPage';
 import { LoginPage } from '../pages/login/LoginPage';
+import { PaymentConfigPage } from '../pages/merchant/PaymentConfigPage';
 import { RegisterPage } from '../pages/register/RegisterPage';
 
 function RequireAuth() {
@@ -47,6 +48,7 @@ export function AppRouter() {
       </Route>
       <Route element={<RequireAuth />}>
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/settings/payment-config" element={<PaymentConfigPage />} />
         <Route path="/logout" element={<LogoutRedirect />} />
       </Route>
       <Route path="/" element={<RootRedirect />} />
