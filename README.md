@@ -68,3 +68,7 @@ Chinese is preferred for day-to-day development. English is optional when it hel
 GitHub Actions validates commit messages for pull requests in:
 
 `/.github/workflows/commitlint.yml`
+
+### PR validation test
+
+This note exists to trigger a pull request check on the `test` branch.
