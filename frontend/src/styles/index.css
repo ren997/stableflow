@@ -163,6 +163,111 @@ body {
   margin-top: 16px;
 }
 
+.invoice-create-card,
+.invoice-detail-card,
+.invoice-table-card {
+  height: 100%;
+}
+
+.invoice-alert {
+  margin-bottom: 16px;
+}
+
+.invoice-config-notice {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invoice-filter-bar {
+  justify-content: flex-end;
+}
+
+.invoice-table-card .ant-table-wrapper {
+  overflow-x: auto;
+}
+
+.invoice-table-card .ant-table-tbody > tr {
+  cursor: pointer;
+}
+
+.invoice-detail-card .ant-descriptions-item-label,
+.invoice-detail-card .ant-descriptions-item-content {
+  word-break: break-word;
+}
+
+.payment-info-card,
+.payment-status-card,
+.payment-proof-card {
+  width: 100%;
+}
+
+.invoice-qr-shell {
+  display: grid;
+  place-items: center;
+  min-height: 224px;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--panel-border);
+}
+
+.public-payment-shell {
+  position: relative;
+  min-height: 100vh;
+  padding: 32px;
+  overflow: hidden;
+}
+
+.public-payment-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(15, 118, 110, 0.18), transparent 24%),
+    radial-gradient(circle at 90% 10%, rgba(29, 78, 216, 0.18), transparent 20%),
+    linear-gradient(160deg, rgba(248, 251, 252, 0.98), rgba(232, 241, 245, 0.94));
+  pointer-events: none;
+}
+
+.public-payment-content {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.public-payment-header {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.public-payment-title {
+  margin-top: 8px !important;
+  margin-bottom: 8px !important;
+}
+
+.public-payment-subtitle {
+  max-width: 720px;
+  margin-bottom: 0 !important;
+}
+
+.public-payment-card {
+  width: 100%;
+}
+
+.public-payment-qr-shell {
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  padding: 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid var(--panel-border);
+}
+
 @media (max-width: 768px) {
   .auth-shell,
   .dashboard-shell {
@@ -180,5 +285,22 @@ body {
 
   .auth-switch {
     flex-direction: column;
+  }
+
+  .invoice-config-notice {
+    white-space: normal;
+  }
+
+  .invoice-filter-bar {
+    justify-content: stretch;
+  }
+
+  .public-payment-shell {
+    padding: 20px;
+  }
+
+  .public-payment-header {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

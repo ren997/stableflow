@@ -128,7 +128,7 @@ class InvoiceControllerTest {
                                 "USDC",
                                 "SOLANA",
                                 "Monthly fee",
-                                OffsetDateTime.parse("2026-03-21T10:00:00Z")
+                                OffsetDateTime.now().plusDays(1)
                             )
                         )
                     )

@@ -137,6 +137,9 @@ export function PaymentConfigPage() {
           </Typography.Paragraph>
         </div>
         <Space wrap>
+          <Button type="primary" onClick={() => navigate('/invoices')}>
+            Invoices
+          </Button>
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/dashboard')}>
             Back to dashboard
           </Button>

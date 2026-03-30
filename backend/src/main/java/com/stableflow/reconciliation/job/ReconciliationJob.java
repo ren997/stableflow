@@ -28,8 +28,9 @@ public class ReconciliationJob {
             return;
         }
 
-        int reconciledCount = reconciliationService.reconcilePendingTransactions(resolveBatchSize());
-        log.info("ReconciliationJob finished, reconciledCount={}", reconciledCount);
+        int batchSize = resolveBatchSize();
+        int reconciledCount = reconciliationService.reconcilePendingTransactions(batchSize);
+        log.info("ReconciliationJob finished, batchSize={}, reconciledCount={}", batchSize, reconciledCount);
     }
 
     private int resolveBatchSize() {

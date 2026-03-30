@@ -30,8 +30,9 @@ public class PaymentVerifyJob {
         }
 
         // 按配置批次处理 PENDING 候选交易，让扫描和验证两个阶段保持解耦。
-        int verifiedCount = paymentVerificationService.verifyPendingTransactions(resolveBatchSize());
-        log.info("PaymentVerifyJob finished, verifiedCount={}", verifiedCount);
+        int batchSize = resolveBatchSize();
+        int verifiedCount = paymentVerificationService.verifyPendingTransactions(batchSize);
+        log.info("PaymentVerifyJob finished, batchSize={}, verifiedCount={}", batchSize, verifiedCount);
     }
 
     private int resolveBatchSize() {

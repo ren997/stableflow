@@ -17,6 +17,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class SinglePaymentVerificationServiceImpl implements SinglePaymentVerificationService {
+
+    private static final Logger log = LoggerFactory.getLogger(SinglePaymentVerificationServiceImpl.class);
 
     private static final Set<PaymentVerificationResultEnum> EFFECTIVE_VERIFICATION_RESULTS = Set.of(
         PaymentVerificationResultEnum.PAID,
@@ -57,6 +61,7 @@ public class SinglePaymentVerificationServiceImpl implements SinglePaymentVerifi
         // 先得出验证结论，再把结论回写到 payment_transaction。
         VerificationDecision decision = decideVerification(paymentTransaction);
         applyDecision(paymentTransaction, decision);
+        logVerification(paymentTransaction, decision);
         return new PaymentVerificationResultVo(
             paymentTransaction.getId(),
             decision.invoiceId(),
@@ -195,6 +200,19 @@ public class SinglePaymentVerificationServiceImpl implements SinglePaymentVerifi
         update.setVerificationResult(decision.verificationResult());
         update.setPaymentStatus(decision.paymentStatus());
         paymentTransactionService.updateById(update);
+    }
+
+    private void logVerification(PaymentTransaction paymentTransaction, VerificationDecision decision) {
+        Invoice invoice = decision.invoiceId() == null ? null : invoiceService.getById(decision.invoiceId());
+        log.info(
+            "Verification decision applied, merchantId={}, invoiceId={}, reference={}, txHash={}, verificationResult={}, paymentStatus={}",
+            invoice == null ? null : invoice.getMerchantId(),
+            decision.invoiceId(),
+            paymentTransaction.getReferenceKey(),
+            paymentTransaction.getTxHash(),
+            decision.verificationResult(),
+            decision.paymentStatus()
+        );
     }
 
     private boolean matchesMintAddress(PaymentTransaction paymentTransaction, InvoicePaymentRequest paymentRequest) {

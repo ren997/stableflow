@@ -81,3 +81,13 @@ stableflow:
       batch-size: ${RECONCILIATION_JOB_BATCH_SIZE:50}
       fixed-delay-ms: ${RECONCILIATION_JOB_FIXED_DELAY_MS:30000}
       initial-delay-ms: ${RECONCILIATION_JOB_INITIAL_DELAY_MS:20000}
+  outbox:
+    job:
+      enabled: ${OUTBOX_JOB_ENABLED:true}
+      batch-size: ${OUTBOX_JOB_BATCH_SIZE:50}
+      fixed-delay-ms: ${OUTBOX_JOB_FIXED_DELAY_MS:30000}
+      initial-delay-ms: ${OUTBOX_JOB_INITIAL_DELAY_MS:25000}
+      lock-enabled: ${OUTBOX_JOB_LOCK_ENABLED:true}
+      lock-key: ${OUTBOX_JOB_LOCK_KEY:stableflow:job:outbox-dispatch:lock}
+      lock-ttl: ${OUTBOX_JOB_LOCK_TTL:5m}
+      retry-delay: ${OUTBOX_JOB_RETRY_DELAY:1m}

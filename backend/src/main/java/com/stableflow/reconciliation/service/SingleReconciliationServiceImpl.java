@@ -6,6 +6,7 @@ import com.stableflow.blockchain.entity.PaymentTransaction;
 import com.stableflow.invoice.entity.Invoice;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import com.stableflow.invoice.service.InvoiceService;
+import com.stableflow.outbox.service.OutboxEventService;
 import com.stableflow.reconciliation.entity.ReconciliationRecord;
 import com.stableflow.reconciliation.enums.ReconciliationStatusEnum;
 import com.stableflow.system.exception.BusinessException;
@@ -16,6 +17,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,9 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SingleReconciliationServiceImpl implements SingleReconciliationService {
 
+    private static final Logger log = LoggerFactory.getLogger(SingleReconciliationServiceImpl.class);
+
     private final InvoiceService invoiceService;
     private final ReconciliationRecordService reconciliationRecordService;
     private final PaymentProofService paymentProofService;
+    private final OutboxEventService outboxEventService;
     private final ObjectMapper objectMapper;
 
     /** Reconcile one verified transaction into invoice state, reconciliation record, and payment proof / 将一笔已验证交易核销到账单状态、核销记录与支付凭证 */
@@ -66,6 +72,27 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
             invoiceSnapshot.status(),
             invoiceSnapshot.exceptionTags(),
             invoiceSnapshot.paidAt()
+        );
+
+        // 第七步写入 outbox 事件，让通知、Webhook、Agent 等后续异步能力都建立在已核销事实之上。
+        outboxEventService.saveInvoicePaymentResultEvent(
+            invoice,
+            paymentTransaction,
+            reconciliationRecord,
+            invoiceSnapshot.status(),
+            invoiceSnapshot.exceptionTags(),
+            invoiceSnapshot.paidAt()
+        );
+
+        log.info(
+            "Reconciliation applied, merchantId={}, invoiceId={}, reference={}, txHash={}, verificationResult={}, reconciliationStatus={}, finalStatus={}",
+            invoice.getMerchantId(),
+            invoice.getId(),
+            paymentTransaction.getReferenceKey(),
+            paymentTransaction.getTxHash(),
+            paymentTransaction.getVerificationResult(),
+            reconciliationRecord.getReconciliationStatus(),
+            invoiceSnapshot.status()
         );
         return true;
     }

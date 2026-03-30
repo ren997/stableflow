@@ -49,9 +49,9 @@ public class PaymentScanServiceImpl implements PaymentScanService {
                 totalInserted += scanRecipientAddress(paymentConfig);
             } catch (RuntimeException ex) {
                 log.error(
-                    "Skipping failed recipientAddress={} for merchantId={} due to scan error",
-                    paymentConfig.getWalletAddress(),
+                    "Skipping failed scan batch, merchantId={}, recipientAddress={}",
                     paymentConfig.getMerchantId(),
+                    paymentConfig.getWalletAddress(),
                     ex
                 );
             }
@@ -96,8 +96,11 @@ public class PaymentScanServiceImpl implements PaymentScanService {
         // 整个地址批次处理完成后再推进游标，避免处理中途失败导致交易漏扫。
         paymentScanCursorService.updateCursor(recipientAddress, newestProcessedSignature);
         log.info(
-            "Scanned recipientAddress={}, newSignatures={}, inserted={}",
+            "Payment scan batch finished, merchantId={}, recipientAddress={}, previousCursor={}, newestCursor={}, newSignatures={}, inserted={}",
+            paymentConfig.getMerchantId(),
             recipientAddress,
+            cursor.getLastSeenSignature(),
+            newestProcessedSignature,
             candidateSignatures.size(),
             insertedCount
         );

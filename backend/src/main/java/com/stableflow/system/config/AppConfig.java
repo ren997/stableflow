@@ -11,7 +11,8 @@ import org.springframework.context.annotation.Configuration;
     SolanaScanProperties.class,
     InvoiceExpireJobProperties.class,
     PaymentVerifyProperties.class,
-    ReconciliationJobProperties.class
+    ReconciliationJobProperties.class,
+    OutboxJobProperties.class
 })
 public class AppConfig {
 }

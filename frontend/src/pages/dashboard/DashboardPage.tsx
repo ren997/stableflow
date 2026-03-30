@@ -94,6 +94,9 @@ export function DashboardPage() {
           </Typography.Paragraph>
         </div>
         <Space wrap>
+          <Button type="primary" ghost onClick={() => navigate('/invoices')}>
+            Invoices
+          </Button>
           <Button type="primary" onClick={() => navigate('/settings/payment-config')}>
             Payment config
           </Button>

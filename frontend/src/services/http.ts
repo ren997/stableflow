@@ -60,9 +60,13 @@ function getErrorMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
-export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function requestInternal<T>(
+  path: string,
+  init: RequestInit = {},
+  options: { includeAuth: boolean; clearOnUnauthorized: boolean }
+): Promise<T> {
   const headers = new Headers(init.headers);
-  const token = getAccessToken();
+  const token = options.includeAuth ? getAccessToken() : null;
 
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
@@ -80,7 +84,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   const payload = await readBody(response);
 
   if (!response.ok) {
-    if (response.status === 401) {
+    if (response.status === 401 && options.clearOnUnauthorized) {
       clearSession();
     }
 
@@ -92,4 +96,18 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   }
 
   return payload as T;
+}
+
+export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  return requestInternal<T>(path, init, {
+    includeAuth: true,
+    clearOnUnauthorized: true
+  });
+}
+
+export async function publicRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  return requestInternal<T>(path, init, {
+    includeAuth: false,
+    clearOnUnauthorized: false
+  });
 }

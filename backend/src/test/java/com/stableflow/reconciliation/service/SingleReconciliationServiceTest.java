@@ -11,6 +11,7 @@ import com.stableflow.blockchain.entity.PaymentTransaction;
 import com.stableflow.invoice.entity.Invoice;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import com.stableflow.invoice.service.InvoiceService;
+import com.stableflow.outbox.service.OutboxEventService;
 import com.stableflow.reconciliation.entity.ReconciliationRecord;
 import com.stableflow.reconciliation.enums.ReconciliationStatusEnum;
 import com.stableflow.verification.enums.PaymentVerificationResultEnum;
@@ -35,6 +36,9 @@ class SingleReconciliationServiceTest {
     @Mock
     private PaymentProofService paymentProofService;
 
+    @Mock
+    private OutboxEventService outboxEventService;
+
     private SingleReconciliationService singleReconciliationService;
 
     @BeforeEach
@@ -43,6 +47,7 @@ class SingleReconciliationServiceTest {
             invoiceService,
             reconciliationRecordService,
             paymentProofService,
+            outboxEventService,
             new ObjectMapper()
         );
     }
@@ -55,6 +60,7 @@ class SingleReconciliationServiceTest {
         when(reconciliationRecordService.existsByInvoiceIdAndTxHash(100L, "tx-paid")).thenReturn(false);
         when(invoiceService.getById(100L)).thenReturn(invoice);
         when(reconciliationRecordService.saveIfAbsent(any(ReconciliationRecord.class))).thenReturn(true);
+        when(outboxEventService.saveInvoicePaymentResultEvent(any(), any(), any(), any(), any(), any())).thenReturn(true);
 
         boolean reconciled = singleReconciliationService.reconcileTransaction(paymentTransaction);
 
@@ -69,6 +75,7 @@ class SingleReconciliationServiceTest {
         assertEquals(ReconciliationStatusEnum.SUCCESS, recordCaptor.getValue().getReconciliationStatus());
         assertEquals("Invoice marked as paid.", recordCaptor.getValue().getResultMessage());
         verify(paymentProofService).saveIfAbsent(any(), any(), any(), any(), any(), any());
+        verify(outboxEventService).saveInvoicePaymentResultEvent(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -79,6 +86,7 @@ class SingleReconciliationServiceTest {
         when(reconciliationRecordService.existsByInvoiceIdAndTxHash(101L, "tx-wrong")).thenReturn(false);
         when(invoiceService.getById(101L)).thenReturn(invoice);
         when(reconciliationRecordService.saveIfAbsent(any(ReconciliationRecord.class))).thenReturn(true);
+        when(outboxEventService.saveInvoicePaymentResultEvent(any(), any(), any(), any(), any(), any())).thenReturn(true);
 
         boolean reconciled = singleReconciliationService.reconcileTransaction(paymentTransaction);
 
@@ -92,6 +100,7 @@ class SingleReconciliationServiceTest {
         verify(reconciliationRecordService).saveIfAbsent(recordCaptor.capture());
         assertEquals(ReconciliationStatusEnum.SKIPPED, recordCaptor.getValue().getReconciliationStatus());
         verify(paymentProofService).saveIfAbsent(any(), any(), any(), any(), any(), any());
+        verify(outboxEventService).saveInvoicePaymentResultEvent(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -102,6 +111,7 @@ class SingleReconciliationServiceTest {
         when(reconciliationRecordService.existsByInvoiceIdAndTxHash(103L, "tx-late")).thenReturn(false);
         when(invoiceService.getById(103L)).thenReturn(invoice);
         when(reconciliationRecordService.saveIfAbsent(any(ReconciliationRecord.class))).thenReturn(true);
+        when(outboxEventService.saveInvoicePaymentResultEvent(any(), any(), any(), any(), any(), any())).thenReturn(true);
 
         boolean reconciled = singleReconciliationService.reconcileTransaction(paymentTransaction);
 
