@@ -58,7 +58,7 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
 
         // 第四步计算账单更新快照，并先落库账单状态，确保后续凭证读取到的是最新业务结果。
         InvoiceSnapshot invoiceSnapshot = buildInvoiceSnapshot(invoice, paymentTransaction, decision);
-        applyInvoiceUpdate(invoice.getId(), invoiceSnapshot);
+        applyInvoiceUpdate(invoice, invoiceSnapshot);
 
         // 第五步沉淀核销记录，保留这笔交易为什么被认账或跳过的处理痕迹。
         ReconciliationRecord reconciliationRecord = toReconciliationRecord(paymentTransaction, decision);
@@ -165,10 +165,16 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
         );
     }
 
-    private void applyInvoiceUpdate(Long invoiceId, InvoiceSnapshot invoiceSnapshot) {
+    private void applyInvoiceUpdate(Invoice invoice, InvoiceSnapshot invoiceSnapshot) {
+        try {
+            InvoiceStatusEnum.ensureCanTransition(invoice.getStatus(), invoiceSnapshot.status());
+        } catch (IllegalStateException ex) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, ex.getMessage());
+        }
+
         // 只更新核销需要变动的字段，避免覆盖账单上的无关信息。
         Invoice update = new Invoice();
-        update.setId(invoiceId);
+        update.setId(invoice.getId());
         update.setStatus(invoiceSnapshot.status());
         update.setExceptionTags(invoiceSnapshot.exceptionTags());
         update.setPaidAt(invoiceSnapshot.paidAt());

@@ -125,6 +125,13 @@ export function activateInvoice(id: number): Promise<InvoiceDetail> {
   });
 }
 
+export function cancelInvoice(id: number): Promise<InvoiceDetail> {
+  return request<InvoiceDetail>('/invoices/cancel', {
+    method: 'POST',
+    body: JSON.stringify({ id })
+  });
+}
+
 export function getInvoicePaymentInfo(id: number): Promise<InvoicePaymentInfo> {
   return request<InvoicePaymentInfo>('/invoices/payment-info', {
     method: 'POST',

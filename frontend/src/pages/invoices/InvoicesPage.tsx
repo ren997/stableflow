@@ -28,6 +28,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ApiError } from '../../services/http';
 import {
   activateInvoice,
+  cancelInvoice,
   createInvoice,
   getInvoiceDetail,
   getInvoicePaymentInfo,
@@ -52,6 +53,7 @@ const DEFAULT_CURRENCY = 'USDC';
 const statusMeta: Record<string, { label: string; color: string }> = {
   DRAFT: { label: 'Draft', color: 'default' },
   PENDING: { label: 'Pending', color: 'processing' },
+  CANCELLED: { label: 'Cancelled', color: 'default' },
   PAID: { label: 'Paid', color: 'success' },
   PARTIALLY_PAID: { label: 'Partial', color: 'gold' },
   OVERPAID: { label: 'Overpaid', color: 'volcano' },
@@ -63,6 +65,7 @@ const statusOptions = [
   { value: '', label: 'All statuses' },
   { value: 'DRAFT', label: 'Draft' },
   { value: 'PENDING', label: 'Pending' },
+  { value: 'CANCELLED', label: 'Cancelled' },
   { value: 'PAID', label: 'Paid' },
   { value: 'PARTIALLY_PAID', label: 'Partial' },
   { value: 'OVERPAID', label: 'Overpaid' },
@@ -154,6 +157,23 @@ function PaymentInfoCard({
               Activate invoice
             </Button>
           }
+        />
+      </Card>
+    );
+  }
+
+  if (invoice.status === 'CANCELLED') {
+    return (
+      <Card
+        className="glass-card payment-info-card"
+        title="Payment setup"
+        extra={<InvoiceStatusTag status={invoice.status} />}
+      >
+        <Alert
+          type="warning"
+          showIcon
+          message="This invoice has been cancelled."
+          description="Cancelled invoices are removed from the payment flow and no longer expose payment instructions."
         />
       </Card>
     );
@@ -404,11 +424,15 @@ function PaymentProofCard({
 function InvoiceDetailCard({
   invoice,
   loading,
-  onBackToList
+  onBackToList,
+  onCancel,
+  cancelLoading
 }: {
   invoice: InvoiceDetail | null;
   loading: boolean;
   onBackToList: () => void;
+  onCancel: () => void;
+  cancelLoading: boolean;
 }) {
   if (loading) {
     return (
@@ -438,6 +462,11 @@ function InvoiceDetailCard({
       extra={
         <Space wrap>
           <InvoiceStatusTag status={invoice.status} />
+          {(invoice.status === 'DRAFT' || invoice.status === 'PENDING') ? (
+            <Button danger size="small" loading={cancelLoading} onClick={onCancel}>
+              Cancel invoice
+            </Button>
+          ) : null}
           <Button size="small" onClick={onBackToList}>
             Clear selection
           </Button>
@@ -498,7 +527,11 @@ export function InvoicesPage() {
   const paymentInfoQuery = useQuery({
     queryKey: ['invoice-payment-info', selectedInvoiceId],
     queryFn: () => getInvoicePaymentInfo(selectedInvoiceId as number),
-    enabled: selectedInvoiceId != null && selectedInvoiceId > 0 && detailQuery.data?.status !== 'DRAFT',
+    enabled:
+      selectedInvoiceId != null
+      && selectedInvoiceId > 0
+      && detailQuery.data?.status !== 'DRAFT'
+      && detailQuery.data?.status !== 'CANCELLED',
     retry: false
   });
 
@@ -508,16 +541,30 @@ export function InvoicesPage() {
     enabled: selectedInvoiceId != null && selectedInvoiceId > 0,
     retry: false,
     refetchInterval:
-      selectedInvoiceId != null && selectedInvoiceId > 0 && detailQuery.data?.status !== 'DRAFT' ? 10000 : false
+      selectedInvoiceId != null
+      && selectedInvoiceId > 0
+      && detailQuery.data?.status !== 'DRAFT'
+      && detailQuery.data?.status !== 'CANCELLED'
+        ? 10000
+        : false
   });
 
   const paymentProofQuery = useQuery({
     queryKey: ['invoice-payment-proof', selectedInvoiceId],
     queryFn: () => getInvoicePaymentProof(selectedInvoiceId as number),
-    enabled: selectedInvoiceId != null && selectedInvoiceId > 0 && detailQuery.data?.status !== 'DRAFT',
+    enabled:
+      selectedInvoiceId != null
+      && selectedInvoiceId > 0
+      && detailQuery.data?.status !== 'DRAFT'
+      && detailQuery.data?.status !== 'CANCELLED',
     retry: false,
     refetchInterval:
-      selectedInvoiceId != null && selectedInvoiceId > 0 && detailQuery.data?.status !== 'DRAFT' ? 10000 : false
+      selectedInvoiceId != null
+      && selectedInvoiceId > 0
+      && detailQuery.data?.status !== 'DRAFT'
+      && detailQuery.data?.status !== 'CANCELLED'
+        ? 10000
+        : false
   });
 
   const createMutation = useMutation({
@@ -547,6 +594,18 @@ export function InvoicesPage() {
     }
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: cancelInvoice,
+    onSuccess: (invoice) => {
+      queryClient.setQueryData(['invoice-detail', invoice.id], invoice);
+      queryClient.invalidateQueries({ queryKey: ['invoice-list'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-payment-status', invoice.id] });
+      queryClient.removeQueries({ queryKey: ['invoice-payment-info', invoice.id] });
+      queryClient.removeQueries({ queryKey: ['invoice-payment-proof', invoice.id] });
+      message.success('Invoice cancelled');
+    }
+  });
+
   const paymentConfigError = paymentConfigQuery.error instanceof ApiError ? paymentConfigQuery.error : null;
   const missingPaymentConfig = paymentConfigError?.code === PAYMENT_CONFIG_NOT_FOUND;
 
@@ -559,7 +618,8 @@ export function InvoicesPage() {
       paymentProofQuery.error,
       paymentStatusQuery.error,
       createMutation.error,
-      activateMutation.error
+      activateMutation.error,
+      cancelMutation.error
     ];
     const unauthorized = errors.find((error) => error instanceof ApiError && error.status === 401);
     if (unauthorized instanceof ApiError) {
@@ -569,6 +629,7 @@ export function InvoicesPage() {
     }
   }, [
     activateMutation.error,
+    cancelMutation.error,
     createMutation.error,
     detailQuery.error,
     listQuery.error,
@@ -852,6 +913,12 @@ export function InvoicesPage() {
               invoice={selectedInvoice}
               loading={detailQuery.isLoading}
               onBackToList={() => navigate('/invoices')}
+              onCancel={() => {
+                if (selectedInvoiceId) {
+                  cancelMutation.mutate(selectedInvoiceId);
+                }
+              }}
+              cancelLoading={cancelMutation.isPending}
             />
 
             {selectedInvoice ? (
@@ -972,6 +1039,12 @@ export function InvoicesPage() {
       {activateMutation.error instanceof ApiError && activateMutation.error.status !== 401 ? (
         <Card className="error-card">
           <Typography.Text type="danger">{activateMutation.error.message}</Typography.Text>
+        </Card>
+      ) : null}
+
+      {cancelMutation.error instanceof ApiError && cancelMutation.error.status !== 401 ? (
+        <Card className="error-card">
+          <Typography.Text type="danger">{cancelMutation.error.message}</Typography.Text>
         </Card>
       ) : null}
     </div>

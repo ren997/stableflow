@@ -2,7 +2,9 @@ package com.stableflow.reconciliation.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -14,6 +16,8 @@ import com.stableflow.invoice.service.InvoiceService;
 import com.stableflow.outbox.service.OutboxEventService;
 import com.stableflow.reconciliation.entity.ReconciliationRecord;
 import com.stableflow.reconciliation.enums.ReconciliationStatusEnum;
+import com.stableflow.system.exception.BusinessException;
+import com.stableflow.system.exception.ErrorCode;
 import com.stableflow.verification.enums.PaymentVerificationResultEnum;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -129,6 +133,24 @@ class SingleReconciliationServiceTest {
         boolean reconciled = singleReconciliationService.reconcileTransaction(paymentTransaction);
 
         assertFalse(reconciled);
+    }
+
+    @Test
+    void shouldRejectIllegalInvoiceStatusRegressionDuringReconciliation() {
+        PaymentTransaction paymentTransaction = transaction(104L, "tx-partial", PaymentVerificationResultEnum.PARTIALLY_PAID, utc("2026-03-17T10:00:00Z"));
+        Invoice invoice = invoice(104L, InvoiceStatusEnum.PAID, null);
+
+        when(reconciliationRecordService.existsByInvoiceIdAndTxHash(104L, "tx-partial")).thenReturn(false);
+        when(invoiceService.getById(104L)).thenReturn(invoice);
+
+        BusinessException exception = assertThrows(
+            BusinessException.class,
+            () -> singleReconciliationService.reconcileTransaction(paymentTransaction)
+        );
+
+        assertEquals(ErrorCode.INVALID_REQUEST, exception.getErrorCode());
+        assertEquals("Illegal invoice status transition from PAID to PARTIALLY_PAID", exception.getMessage());
+        verify(invoiceService, never()).updateById(any(Invoice.class));
     }
 
     private PaymentTransaction transaction(

@@ -48,6 +48,12 @@ public class InvoiceController {
         return ApiResponse.success(invoiceService.activateInvoice(request));
     }
 
+    @PostMapping("/cancel")
+    @Operation(summary = "Cancel invoice / 取消账单")
+    public ApiResponse<InvoiceDetailVo> cancelInvoice(@Valid @RequestBody InvoiceIdQueryDto request) {
+        return ApiResponse.success(invoiceService.cancelInvoice(request.id()));
+    }
+
     @PostMapping("/update")
     @Operation(summary = "Update invoice / 编辑账单")
     public ApiResponse<InvoiceDetailVo> updateInvoice(@Valid @RequestBody UpdateInvoiceRequestDto request) {

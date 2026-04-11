@@ -198,6 +198,21 @@ class InvoiceControllerTest {
     }
 
     @Test
+    void shouldCancelInvoiceViaPost() throws Exception {
+        when(invoiceService.cancelInvoice(1L)).thenReturn(cancelledInvoiceDetailVo());
+
+        mockMvc.perform(
+                post("/api/invoices/cancel")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new InvoiceIdQueryDto(1L)))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(1))
+            .andExpect(jsonPath("$.data.status").value("CANCELLED"))
+            .andExpect(jsonPath("$.data.paymentInfo").doesNotExist());
+    }
+
+    @Test
     void shouldQueryPaymentInfoViaPost() throws Exception {
         when(invoiceService.getPaymentInfo(1L)).thenReturn(paymentInfoVo());
 
@@ -290,6 +305,24 @@ class InvoiceControllerTest {
             null,
             OffsetDateTime.parse("2026-03-20T10:00:00Z"),
             paymentInfoVo()
+        );
+    }
+
+    private InvoiceDetailVo cancelledInvoiceDetailVo() {
+        return new InvoiceDetailVo(
+            1L,
+            "pub-001",
+            "INV-001",
+            "Alice",
+            new BigDecimal("99.00"),
+            "USDC",
+            "SOLANA",
+            "Monthly fee",
+            InvoiceStatusEnum.CANCELLED,
+            OffsetDateTime.parse("2026-03-21T10:00:00Z"),
+            null,
+            OffsetDateTime.parse("2026-03-20T10:00:00Z"),
+            null
         );
     }
 

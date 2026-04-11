@@ -773,7 +773,7 @@
 
 #### T901 前端登录页
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0
 - 依赖：T101
@@ -845,7 +845,7 @@
 
 #### T906 前端 Dashboard 汇总页
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0
 - 依赖：T501, T901
@@ -996,21 +996,21 @@
 
 #### T1007 Invoice 取消/作废
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0.5
 - 依赖：T201
 - 任务说明：商家创建错误账单后无法取消，`InvoiceStatusEnum` 无 `CANCELLED` 状态
 - 交付物：
   - `InvoiceStatusEnum` 新增 `CANCELLED`
-  - `POST /api/invoices/{id}/cancel`
+  - `POST /api/invoices/cancel`
 - 完成标准：
   - 仅 `DRAFT` 或 `PENDING` 状态可取消
-  - 已取消账单不会被扫描和核销
+  - 已取消账单不会暴露支付信息，也不会进入验证和核销归账流程
 
 #### T1008 Invoice 状态流转集中校验
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0.5
 - 依赖：T201
@@ -1026,7 +1026,7 @@
 
 #### T1009 输入校验补全
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0.5
 - 依赖：T201

@@ -13,6 +13,7 @@ import { clearSession, getMerchantSession } from '../../services/session';
 const statusMeta: Record<string, { label: string; color: string }> = {
   DRAFT: { label: 'Draft', color: 'default' },
   PENDING: { label: 'Pending', color: 'processing' },
+  CANCELLED: { label: 'Cancelled', color: 'default' },
   PAID: { label: 'Paid', color: 'success' },
   PARTIALLY_PAID: { label: 'Partial', color: 'gold' },
   OVERPAID: { label: 'Overpaid', color: 'volcano' },

@@ -108,10 +108,18 @@ public class SinglePaymentVerificationServiceImpl implements SinglePaymentVerifi
                 "Reference key points to a missing invoice."
             );
         }
+        if (invoice.getStatus() == com.stableflow.invoice.enums.InvoiceStatusEnum.CANCELLED) {
+            return new VerificationDecision(
+                null,
+                PaymentVerificationResultEnum.INVALID_REFERENCE,
+                PaymentTransactionStatusEnum.UNMATCHED,
+                "Invoice has been cancelled and is no longer reconcilable."
+            );
+        }
         if (invoice.getStatus() == com.stableflow.invoice.enums.InvoiceStatusEnum.DRAFT) {
             return new VerificationDecision(
                 null,
-                PaymentVerificationResultEnum.PENDING,
+                PaymentVerificationResultEnum.INVALID_REFERENCE,
                 PaymentTransactionStatusEnum.UNMATCHED,
                 "Draft invoice is not active yet and cannot enter payment verification."
             );

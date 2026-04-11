@@ -10,6 +10,7 @@ const finalStatuses = new Set(['PAID', 'OVERPAID', 'PARTIALLY_PAID', 'EXPIRED', 
 const statusMeta: Record<string, { label: string; color: string; tone: 'info' | 'success' | 'warning' | 'error' }> = {
   DRAFT: { label: 'Draft', color: 'default', tone: 'info' },
   PENDING: { label: 'Pending', color: 'processing', tone: 'info' },
+  CANCELLED: { label: 'Cancelled', color: 'default', tone: 'warning' },
   PAID: { label: 'Paid', color: 'success', tone: 'success' },
   PARTIALLY_PAID: { label: 'Partial', color: 'gold', tone: 'warning' },
   OVERPAID: { label: 'Overpaid', color: 'volcano', tone: 'warning' },

@@ -21,6 +21,9 @@ public interface InvoiceService extends IService<Invoice> {
     /** Activate a draft invoice into pending payment state / 将草稿账单激活为待支付状态 */
     InvoiceDetailVo activateInvoice(ActivateInvoiceRequestDto request);
 
+    /** Cancel a draft or pending invoice owned by the current merchant / 取消当前商家名下的草稿或待支付账单 */
+    InvoiceDetailVo cancelInvoice(Long invoiceId);
+
     /** Update an editable invoice owned by the current merchant / 更新当前商家可编辑的账单 */
     InvoiceDetailVo updateInvoice(UpdateInvoiceRequestDto request);
 

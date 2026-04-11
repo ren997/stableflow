@@ -110,9 +110,22 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
             invoicePaymentRequestMapper.updateById(paymentRequest);
         }
 
-        invoice.setStatus(InvoiceStatusEnum.PENDING);
+        applyStatusTransition(invoice, InvoiceStatusEnum.PENDING);
         invoiceMapper.updateById(invoice);
         return toDetailResponse(invoice, paymentRequest);
+    }
+
+    @Transactional
+    @Override
+    public InvoiceDetailVo cancelInvoice(Long invoiceId) {
+        Invoice invoice = getOwnedInvoice(invoiceId);
+        if (invoice.getStatus() != InvoiceStatusEnum.DRAFT && invoice.getStatus() != InvoiceStatusEnum.PENDING) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "Only DRAFT or PENDING invoices can be cancelled");
+        }
+
+        applyStatusTransition(invoice, InvoiceStatusEnum.CANCELLED);
+        invoiceMapper.updateById(invoice);
+        return toDetailResponse(invoice, findPaymentRequest(invoiceId));
     }
 
     @Transactional
@@ -238,7 +251,7 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
             invoice.getExpireAt(),
             invoice.getPaidAt(),
             invoice.getCreatedAt(),
-            invoice.getStatus() == InvoiceStatusEnum.DRAFT || paymentRequest == null ? null : toPaymentInfoResponse(paymentRequest)
+            hidesPaymentInfo(invoice.getStatus()) || paymentRequest == null ? null : toPaymentInfoResponse(paymentRequest)
         );
     }
 
@@ -313,6 +326,15 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
         return value == null || value.isBlank() ? defaultValue : value.toUpperCase(Locale.ROOT);
     }
 
+    private void applyStatusTransition(Invoice invoice, InvoiceStatusEnum targetStatus) {
+        try {
+            InvoiceStatusEnum.ensureCanTransition(invoice.getStatus(), targetStatus);
+        } catch (IllegalStateException ex) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, ex.getMessage());
+        }
+        invoice.setStatus(targetStatus);
+    }
+
     private void validateEditableInvoice(Invoice invoice) {
         if (invoice.getStatus() != InvoiceStatusEnum.DRAFT) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "Only DRAFT invoices can be edited");
@@ -351,8 +373,8 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
         if (invoice == null) {
             throw new BusinessException(ErrorCode.INVOICE_NOT_FOUND);
         }
-        if (invoice.getStatus() == InvoiceStatusEnum.DRAFT) {
-            throw new BusinessException(ErrorCode.INVOICE_NOT_FOUND, "Public payment page is not available for draft invoices");
+        if (hidesPaymentInfo(invoice.getStatus())) {
+            throw new BusinessException(ErrorCode.INVOICE_NOT_FOUND, "Public payment page is not available for inactive invoices");
         }
 
         // 2. 获取支付请求快照
@@ -378,9 +400,16 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
     }
 
     private void ensureInvoiceActivated(Invoice invoice) {
-        if (invoice.getStatus() == InvoiceStatusEnum.DRAFT) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "Draft invoices do not expose payment info before activation");
+        if (hidesPaymentInfo(invoice.getStatus())) {
+            throw new BusinessException(
+                ErrorCode.INVALID_REQUEST,
+                "Inactive invoices do not expose payment info before activation or after cancellation"
+            );
         }
+    }
+
+    private boolean hidesPaymentInfo(InvoiceStatusEnum status) {
+        return status == InvoiceStatusEnum.DRAFT || status == InvoiceStatusEnum.CANCELLED;
     }
 
     @Transactional
@@ -400,6 +429,11 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
 
         int expiredCount = 0;
         for (Invoice invoice : expiredCandidates) {
+            try {
+                InvoiceStatusEnum.ensureCanTransition(invoice.getStatus(), InvoiceStatusEnum.EXPIRED);
+            } catch (IllegalStateException ex) {
+                throw new BusinessException(ErrorCode.INVALID_REQUEST, ex.getMessage());
+            }
             // 逐条按当前状态做条件更新，避免任务与并发支付处理直接互相覆盖。
             int updatedRows = invoiceMapper.update(
                 null,
