@@ -52,7 +52,7 @@ stableflow:
     token-ttl: ${JWT_TOKEN_TTL:12h}
   solana:
     rpc-url: ${SOLANA_RPC_URL:https://api.devnet.solana.com}
-    usdc-mint-address: ${SOLANA_USDC_MINT:replace-me}
+    usdc-mint-address: ${SOLANA_USDC_MINT:4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU}
     connect-timeout: ${SOLANA_CONNECT_TIMEOUT:3s}
     read-timeout: ${SOLANA_READ_TIMEOUT:10s}
     retry-max-attempts: ${SOLANA_RETRY_MAX_ATTEMPTS:3}

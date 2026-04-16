@@ -14,7 +14,7 @@ stableflow:
     jwt-secret: change-me
   solana:
     rpc-url: https://api.devnet.solana.com
-    usdc-mint-address: replace-me
+    usdc-mint-address: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
   payment:
     public-base-url: http://localhost:5173
   agent:

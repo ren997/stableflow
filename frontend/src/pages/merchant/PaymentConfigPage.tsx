@@ -37,7 +37,7 @@ import {
 } from '../../services/merchantPaymentConfig';
 import { clearSession } from '../../services/session';
 
-const DEFAULT_MINT_ADDRESS = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const DEFAULT_MINT_ADDRESS = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
 const DEFAULT_CHAIN = 'SOLANA';
 const PAYMENT_CONFIG_NOT_FOUND = 40402;
 
@@ -505,7 +505,7 @@ export function PaymentConfigPage() {
               <Form.Item
                 label="Mint address"
                 name="mintAddress"
-                extra="Defaulted to Solana mainnet USDC mint. Replace it only if your environment uses a different mint."
+                extra="Defaulted to the Solana devnet USDC mint so local scanning and verification use the same token configuration as the backend."
                 rules={[
                   { required: true, message: 'Please enter the mint address' },
                   { max: 128, message: 'Mint address must be within 128 characters' }
