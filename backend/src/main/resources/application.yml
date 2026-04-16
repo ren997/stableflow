@@ -43,6 +43,9 @@ stableflow:
   payment:
     order-association-mode: FIXED_ADDRESS_REFERENCE
     public-base-url: ${PUBLIC_BASE_URL:http://localhost:5173}
+  merchant:
+    ownership:
+      challenge-ttl: ${MERCHANT_OWNERSHIP_CHALLENGE_TTL:10m}
   security:
     jwt-secret: ${JWT_SECRET:change-me-in-env}
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}

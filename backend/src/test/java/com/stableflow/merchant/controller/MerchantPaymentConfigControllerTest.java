@@ -9,8 +9,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stableflow.merchant.dto.MerchantPaymentConfigQueryDto;
 import com.stableflow.merchant.dto.MerchantPaymentConfigRequestDto;
+import com.stableflow.merchant.dto.MerchantWalletOwnershipChallengeRequestDto;
+import com.stableflow.merchant.dto.MerchantWalletOwnershipVerifyRequestDto;
+import com.stableflow.merchant.enums.MerchantWalletOwnershipStatusEnum;
 import com.stableflow.merchant.service.MerchantPaymentConfigService;
 import com.stableflow.merchant.vo.MerchantPaymentConfigVo;
+import com.stableflow.merchant.vo.MerchantWalletOwnershipChallengeVo;
+import com.stableflow.merchant.vo.MerchantWalletOwnershipVerifyVo;
 import com.stableflow.system.exception.GlobalExceptionHandler;
 import java.time.OffsetDateTime;
 import org.junit.jupiter.api.BeforeEach;
@@ -92,6 +97,59 @@ class MerchantPaymentConfigControllerTest {
     }
 
     @Test
+    void shouldCreateWalletOwnershipChallenge() throws Exception {
+        when(merchantPaymentConfigService.createOwnershipChallenge()).thenReturn(
+            new MerchantWalletOwnershipChallengeVo(
+                1L,
+                "wallet-1",
+                "SOLANA",
+                MerchantWalletOwnershipStatusEnum.CHALLENGE_ISSUED,
+                "own_abc",
+                "sign this challenge",
+                OffsetDateTime.parse("2026-03-20T10:10:00Z")
+            )
+        );
+
+        mockMvc.perform(
+                post("/api/merchant/payment-config/ownership/challenge")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new MerchantWalletOwnershipChallengeRequestDto()))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.challengeCode").value("own_abc"))
+            .andExpect(jsonPath("$.data.ownershipVerificationStatus").value("CHALLENGE_ISSUED"));
+    }
+
+    @Test
+    void shouldSubmitWalletOwnershipSignature() throws Exception {
+        when(merchantPaymentConfigService.verifyOwnership(any(MerchantWalletOwnershipVerifyRequestDto.class))).thenReturn(
+            new MerchantWalletOwnershipVerifyVo(
+                1L,
+                "wallet-1",
+                MerchantWalletOwnershipStatusEnum.SIGNATURE_SUBMITTED,
+                Boolean.FALSE,
+                "Wallet signature stored.",
+                OffsetDateTime.parse("2026-03-20T10:10:00Z"),
+                OffsetDateTime.parse("2026-03-20T10:05:00Z"),
+                null
+            )
+        );
+
+        mockMvc.perform(
+                post("/api/merchant/payment-config/ownership/verify")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new MerchantWalletOwnershipVerifyRequestDto("own_abc", "signed_payload")
+                        )
+                    )
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.ownershipVerificationStatus").value("SIGNATURE_SUBMITTED"))
+            .andExpect(jsonPath("$.data.verifierReady").value(false));
+    }
+
+    @Test
     void shouldNotExposeGetCurrentConfigRoute() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/merchant/payment-config"))
             .andExpect(status().isMethodNotAllowed());
@@ -105,6 +163,10 @@ class MerchantPaymentConfigControllerTest {
             "mint-1",
             "SOLANA",
             Boolean.TRUE,
+            MerchantWalletOwnershipStatusEnum.UNVERIFIED,
+            null,
+            null,
+            null,
             OffsetDateTime.parse("2026-03-20T10:00:00Z"),
             OffsetDateTime.parse("2026-03-20T10:00:00Z")
         );

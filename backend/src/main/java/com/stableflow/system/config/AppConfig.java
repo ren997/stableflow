@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties({
     SecurityProperties.class,
     PaymentProperties.class,
+    MerchantOwnershipProperties.class,
     SolanaProperties.class,
     SolanaScanProperties.class,
     InvoiceExpireJobProperties.class,

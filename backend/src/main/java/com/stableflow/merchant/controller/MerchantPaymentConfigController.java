@@ -4,8 +4,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.stableflow.merchant.dto.MerchantPaymentConfigQueryDto;
 import com.stableflow.merchant.dto.MerchantPaymentConfigRequestDto;
+import com.stableflow.merchant.dto.MerchantWalletOwnershipChallengeRequestDto;
+import com.stableflow.merchant.dto.MerchantWalletOwnershipVerifyRequestDto;
 import com.stableflow.merchant.service.MerchantPaymentConfigService;
 import com.stableflow.merchant.vo.MerchantPaymentConfigVo;
+import com.stableflow.merchant.vo.MerchantWalletOwnershipChallengeVo;
+import com.stableflow.merchant.vo.MerchantWalletOwnershipVerifyVo;
 import com.stableflow.system.api.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,5 +36,21 @@ public class MerchantPaymentConfigController {
     @Operation(summary = "Query current merchant payment config / 查询当前商家收款配置")
     public ApiResponse<MerchantPaymentConfigVo> getCurrentConfig(@Valid @RequestBody MerchantPaymentConfigQueryDto request) {
         return ApiResponse.success(merchantPaymentConfigService.getCurrentConfig());
+    }
+
+    @PostMapping("/ownership/challenge")
+    @Operation(summary = "Create wallet ownership challenge / 创建钱包地址所有权挑战")
+    public ApiResponse<MerchantWalletOwnershipChallengeVo> createOwnershipChallenge(
+        @Valid @RequestBody(required = false) MerchantWalletOwnershipChallengeRequestDto request
+    ) {
+        return ApiResponse.success(merchantPaymentConfigService.createOwnershipChallenge());
+    }
+
+    @PostMapping("/ownership/verify")
+    @Operation(summary = "Submit wallet ownership signature / 提交钱包地址所有权签名")
+    public ApiResponse<MerchantWalletOwnershipVerifyVo> verifyOwnership(
+        @Valid @RequestBody MerchantWalletOwnershipVerifyRequestDto request
+    ) {
+        return ApiResponse.success(merchantPaymentConfigService.verifyOwnership(request));
     }
 }
