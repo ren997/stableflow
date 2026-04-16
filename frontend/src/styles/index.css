@@ -148,15 +148,46 @@ body {
   height: 100%;
 }
 
+.payment-config-verification-card {
+  height: 100%;
+  margin-top: 16px;
+}
+
 .payment-config-notice {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
+.payment-config-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(217, 119, 6, 0.1);
+  color: #b45309;
+}
+
 .payment-config-current-card .ant-descriptions-item-label,
 .payment-config-current-card .ant-descriptions-item-content {
   word-break: break-all;
+}
+
+.payment-config-verification-card .ant-descriptions-item-label,
+.payment-config-verification-card .ant-descriptions-item-content {
+  word-break: break-word;
+}
+
+.payment-config-inner-card {
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.payment-config-inline-hint {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px dashed rgba(15, 23, 42, 0.14);
+  color: var(--text-sub);
+  background: rgba(255, 255, 255, 0.46);
 }
 
 .payment-config-tip-card {
