@@ -44,6 +44,7 @@ import {
 } from '../../services/invoice';
 import { getMerchantPaymentConfig } from '../../services/merchantPaymentConfig';
 import { clearSession } from '../../services/session';
+import { getSystemRuntimeConfig, type SolanaNetwork } from '../../services/system';
 
 const PAYMENT_CONFIG_NOT_FOUND = 40402;
 const PAYMENT_PROOF_NOT_FOUND = 40404;
@@ -108,6 +109,11 @@ function formatDateTime(value?: string | null): string {
     dateStyle: 'medium',
     timeStyle: 'short'
   }).format(timestamp);
+}
+
+function buildExplorerTxUrl(explorerTxBaseUrl: string, txHash: string, solanaNetwork: SolanaNetwork): string {
+  const clusterSuffix = solanaNetwork === 'DEVNET' ? '?cluster=devnet' : '';
+  return `${explorerTxBaseUrl}${txHash}${clusterSuffix}`;
 }
 
 function InvoiceStatusTag({ status }: { status: string }) {
@@ -310,11 +316,15 @@ function PaymentStatusCard({
 function PaymentProofCard({
   paymentProof,
   loading,
-  empty
+  empty,
+  explorerTxBaseUrl,
+  solanaNetwork
 }: {
   paymentProof: InvoicePaymentProof | null;
   loading: boolean;
   empty: boolean;
+  explorerTxBaseUrl?: string | null;
+  solanaNetwork?: SolanaNetwork | null;
 }) {
   return (
     <Card
@@ -408,7 +418,17 @@ function PaymentProofCard({
             </Button>
             <Button
               type="primary"
-              onClick={() => window.open(`https://explorer.solana.com/tx/${paymentProof.txHash}`, '_blank', 'noopener,noreferrer')}
+              disabled={!explorerTxBaseUrl || !solanaNetwork}
+              onClick={() => {
+                if (!explorerTxBaseUrl || !solanaNetwork) {
+                  return;
+                }
+                window.open(
+                  buildExplorerTxUrl(explorerTxBaseUrl, paymentProof.txHash, solanaNetwork),
+                  '_blank',
+                  'noopener,noreferrer'
+                );
+              }}
             >
               Open explorer
             </Button>
@@ -499,6 +519,11 @@ export function InvoicesPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const runtimeConfigQuery = useQuery({
+    queryKey: ['system-runtime-config'],
+    queryFn: getSystemRuntimeConfig,
+    retry: false
+  });
 
   const paymentConfigQuery = useQuery({
     queryKey: ['merchant-payment-config'],
@@ -612,6 +637,7 @@ export function InvoicesPage() {
   useEffect(() => {
     const errors = [
       paymentConfigQuery.error,
+      runtimeConfigQuery.error,
       listQuery.error,
       detailQuery.error,
       paymentInfoQuery.error,
@@ -635,6 +661,7 @@ export function InvoicesPage() {
     listQuery.error,
     navigate,
     paymentConfigQuery.error,
+    runtimeConfigQuery.error,
     paymentInfoQuery.error,
     paymentProofQuery.error,
     paymentStatusQuery.error
@@ -944,6 +971,8 @@ export function InvoicesPage() {
                   paymentProof={paymentProofQuery.data ?? null}
                   loading={paymentProofQuery.isLoading || paymentProofQuery.isFetching}
                   empty={missingPaymentProof}
+                  explorerTxBaseUrl={runtimeConfigQuery.data?.explorerTxBaseUrl}
+                  solanaNetwork={runtimeConfigQuery.data?.solanaNetwork}
                 />
               </>
             ) : null}
@@ -997,6 +1026,12 @@ export function InvoicesPage() {
       {paymentConfigError && !missingPaymentConfig && paymentConfigError.status !== 401 ? (
         <Card className="error-card">
           <Typography.Text type="danger">{paymentConfigError.message}</Typography.Text>
+        </Card>
+      ) : null}
+
+      {runtimeConfigQuery.error instanceof ApiError && runtimeConfigQuery.error.status !== 401 ? (
+        <Card className="error-card">
+          <Typography.Text type="danger">{runtimeConfigQuery.error.message}</Typography.Text>
         </Card>
       ) : null}
 

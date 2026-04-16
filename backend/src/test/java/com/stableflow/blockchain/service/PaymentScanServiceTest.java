@@ -17,6 +17,7 @@ import com.stableflow.merchant.entity.MerchantPaymentConfig;
 import com.stableflow.merchant.service.MerchantPaymentConfigService;
 import com.stableflow.system.config.SolanaProperties;
 import com.stableflow.system.config.SolanaScanProperties;
+import com.stableflow.system.enums.SolanaNetworkEnum;
 import com.stableflow.system.exception.BusinessException;
 import com.stableflow.system.exception.ErrorCode;
 import java.math.BigDecimal;
@@ -46,6 +47,7 @@ class PaymentScanServiceTest {
     private PaymentTransactionService paymentTransactionService;
 
     private final SolanaProperties solanaProperties = new SolanaProperties(
+        SolanaNetworkEnum.DEVNET,
         "http://localhost:8899",
         "usdc-mint-1",
         java.time.Duration.ofSeconds(3),

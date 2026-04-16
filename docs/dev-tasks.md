@@ -724,6 +724,23 @@
   - Agent 可基于已验证数据输出对账总结
   - 结果与 Dashboard 统计口径一致
 
+#### T814 商家钱包所有权真实验签
+
+- 状态：`TODO`
+
+- 优先级：P1
+- 依赖：T103
+- 任务说明：当前商家钱包所有权验证已具备 challenge、签名提交、状态流转和前端交互，但后端验签器仍为占位实现；后续需要接入真实 Solana 钱包签名验签
+- 交付物：
+  - `MerchantWalletOwnershipVerifierServiceImpl` 接入真实验签
+  - 基于 `walletAddress + challengeMessage + signature` 的校验逻辑
+  - 验签成功/失败状态流转与测试
+- 完成标准：
+  - 验签成功后写入 `VERIFIED` 与 `ownershipVerifiedAt`
+  - 验签失败后写入 `FAILED`
+  - `verifierReady` 返回真实能力状态
+  - 不改变当前 `fixed address + reference` 的支付主归因模型
+
 ### 15.2 工程基础补充
 
 #### T811 SpringDoc / Swagger UI 接入

@@ -36,8 +36,8 @@ import {
   type MerchantWalletOwnershipVerifyResult
 } from '../../services/merchantPaymentConfig';
 import { clearSession } from '../../services/session';
+import { getSystemRuntimeConfig } from '../../services/system';
 
-const DEFAULT_MINT_ADDRESS = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
 const DEFAULT_CHAIN = 'SOLANA';
 const PAYMENT_CONFIG_NOT_FOUND = 40402;
 
@@ -327,6 +327,12 @@ export function PaymentConfigPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const currentFormValues = Form.useWatch([], form) as Partial<MerchantPaymentConfigRequest> | undefined;
+  const runtimeConfigQuery = useQuery({
+    queryKey: ['system-runtime-config'],
+    queryFn: getSystemRuntimeConfig,
+    retry: false
+  });
+  const defaultMintAddress = runtimeConfigQuery.data?.defaultMintAddress ?? '';
 
   const configQuery = useQuery({
     queryKey: ['merchant-payment-config'],
@@ -382,9 +388,13 @@ export function PaymentConfigPage() {
     }
   });
 
-  const authError = [configQuery.error, saveMutation.error, challengeMutation.error, verifyMutation.error].find(
-    (error): error is ApiError => error instanceof ApiError && error.status === 401
-  );
+  const authError = [
+    runtimeConfigQuery.error,
+    configQuery.error,
+    saveMutation.error,
+    challengeMutation.error,
+    verifyMutation.error
+  ].find((error): error is ApiError => error instanceof ApiError && error.status === 401);
 
   const hasUnsavedConfigChanges = isConfigDirty(configQuery.data, currentFormValues);
 
@@ -409,15 +419,19 @@ export function PaymentConfigPage() {
     }
 
     if (hasNoConfig) {
+      if (form.isFieldsTouched()) {
+        return;
+      }
       form.setFieldsValue({
         walletAddress: '',
-        mintAddress: DEFAULT_MINT_ADDRESS,
+        mintAddress: defaultMintAddress,
         chain: DEFAULT_CHAIN
       });
     }
-  }, [configQuery.data, form, hasNoConfig]);
+  }, [configQuery.data, defaultMintAddress, form, hasNoConfig]);
 
   const visibleErrors = [
+    runtimeConfigQuery.error instanceof ApiError && runtimeConfigQuery.error.status !== 401 ? runtimeConfigQuery.error : null,
     configError && !hasNoConfig && configError.status !== 401 ? configError : null,
     saveMutation.error instanceof ApiError && saveMutation.error.status !== 401 ? saveMutation.error : null,
     challengeMutation.error instanceof ApiError && challengeMutation.error.status !== 401 ? challengeMutation.error : null,
@@ -475,7 +489,7 @@ export function PaymentConfigPage() {
               requiredMark={false}
               initialValues={{
                 walletAddress: '',
-                mintAddress: DEFAULT_MINT_ADDRESS,
+                mintAddress: '',
                 chain: DEFAULT_CHAIN
               }}
               onFinish={(values) => {
@@ -505,13 +519,13 @@ export function PaymentConfigPage() {
               <Form.Item
                 label="Mint address"
                 name="mintAddress"
-                extra="Defaulted to the Solana devnet USDC mint so local scanning and verification use the same token configuration as the backend."
+                extra="Defaults to the current backend Solana network USDC mint when no merchant config exists yet."
                 rules={[
                   { required: true, message: 'Please enter the mint address' },
                   { max: 128, message: 'Mint address must be within 128 characters' }
                 ]}
               >
-                <Input size="large" placeholder={DEFAULT_MINT_ADDRESS} />
+                <Input size="large" placeholder={defaultMintAddress || 'USDC mint address'} />
               </Form.Item>
 
               <Form.Item
@@ -539,6 +553,12 @@ export function PaymentConfigPage() {
                         walletAddress: configQuery.data.walletAddress,
                         mintAddress: configQuery.data.mintAddress,
                         chain: configQuery.data.chain
+                      });
+                    } else if (hasNoConfig) {
+                      form.setFieldsValue({
+                        walletAddress: '',
+                        mintAddress: defaultMintAddress,
+                        chain: DEFAULT_CHAIN
                       });
                     }
                   }}
