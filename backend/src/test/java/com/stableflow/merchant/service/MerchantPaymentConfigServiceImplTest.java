@@ -18,6 +18,8 @@ import com.stableflow.merchant.vo.MerchantWalletOwnershipChallengeVo;
 import com.stableflow.merchant.vo.MerchantWalletOwnershipVerificationResultVo;
 import com.stableflow.merchant.vo.MerchantWalletOwnershipVerifyVo;
 import com.stableflow.system.config.MerchantOwnershipProperties;
+import com.stableflow.system.config.SolanaProperties;
+import com.stableflow.system.enums.SolanaNetworkEnum;
 import com.stableflow.system.exception.BusinessException;
 import com.stableflow.system.security.CurrentMerchantProvider;
 import java.time.Duration;
@@ -48,7 +50,16 @@ class MerchantPaymentConfigServiceImplTest {
             paymentConfigMapper,
             currentMerchantProvider,
             new MerchantOwnershipProperties(Duration.ofMinutes(10)),
-            merchantWalletOwnershipVerifierService
+            merchantWalletOwnershipVerifierService,
+            new SolanaProperties(
+                SolanaNetworkEnum.DEVNET,
+                null,
+                null,
+                Duration.ofSeconds(3),
+                Duration.ofSeconds(10),
+                3,
+                Duration.ofMillis(500)
+            )
         );
     }
 
@@ -68,14 +79,32 @@ class MerchantPaymentConfigServiceImplTest {
         when(paymentConfigMapper.selectOne(any())).thenReturn(existingConfig);
 
         MerchantPaymentConfigVo result = merchantPaymentConfigService.saveOrUpdate(
-            new MerchantPaymentConfigRequestDto("wallet-new", "mint-1", "SOLANA")
+            new MerchantPaymentConfigRequestDto("wallet-new")
         );
 
         assertEquals(MerchantWalletOwnershipStatusEnum.UNVERIFIED, result.ownershipVerificationStatus());
+        assertEquals("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", result.mintAddress());
+        assertEquals("SOLANA", result.chain());
         assertNull(result.ownershipChallengeExpiresAt());
         assertNull(result.ownershipSignatureSubmittedAt());
         assertNull(result.ownershipVerifiedAt());
         verify(paymentConfigMapper).updateById(existingConfig);
+    }
+
+    @Test
+    void shouldApplySystemManagedMintAndChainWhenSavingConfig() {
+        when(currentMerchantProvider.requireCurrentMerchantId()).thenReturn(10L);
+        when(paymentConfigMapper.selectOne(any())).thenReturn(null);
+
+        MerchantPaymentConfigVo result = merchantPaymentConfigService.saveOrUpdate(
+            new MerchantPaymentConfigRequestDto("wallet-1")
+        );
+
+        assertEquals("wallet-1", result.walletAddress());
+        assertEquals("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", result.mintAddress());
+        assertEquals("SOLANA", result.chain());
+        assertEquals(MerchantWalletOwnershipStatusEnum.UNVERIFIED, result.ownershipVerificationStatus());
+        verify(paymentConfigMapper).insert(any(MerchantPaymentConfig.class));
     }
 
     @Test

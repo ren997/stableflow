@@ -111,9 +111,7 @@ function isConfigDirty(
   }
 
   return (
-    normalizeFormValue(values.walletAddress) !== normalizeFormValue(config.walletAddress) ||
-    normalizeFormValue(values.mintAddress) !== normalizeFormValue(config.mintAddress) ||
-    normalizeFormValue(values.chain, true) !== normalizeFormValue(config.chain, true)
+    normalizeFormValue(values.walletAddress) !== normalizeFormValue(config.walletAddress)
   );
 }
 
@@ -215,7 +213,7 @@ function OwnershipVerificationCard({
         {hasUnsavedConfigChanges ? (
           <div className="notice-bar payment-config-warning">
             <SafetyCertificateOutlined />
-            Save the current wallet address first. Changing the address or chain resets ownership verification status.
+            Save the current wallet address first. Changing the address resets ownership verification status.
           </div>
         ) : null}
 
@@ -412,8 +410,6 @@ export function PaymentConfigPage() {
     if (configQuery.data) {
       form.setFieldsValue({
         walletAddress: configQuery.data.walletAddress,
-        mintAddress: configQuery.data.mintAddress,
-        chain: configQuery.data.chain
       });
       return;
     }
@@ -424,8 +420,6 @@ export function PaymentConfigPage() {
       }
       form.setFieldsValue({
         walletAddress: '',
-        mintAddress: defaultMintAddress,
-        chain: DEFAULT_CHAIN
       });
     }
   }, [configQuery.data, defaultMintAddress, form, hasNoConfig]);
@@ -488,15 +482,11 @@ export function PaymentConfigPage() {
               layout="vertical"
               requiredMark={false}
               initialValues={{
-                walletAddress: '',
-                mintAddress: '',
-                chain: DEFAULT_CHAIN
+                walletAddress: ''
               }}
               onFinish={(values) => {
                 saveMutation.mutate({
-                  walletAddress: values.walletAddress.trim(),
-                  mintAddress: values.mintAddress.trim(),
-                  chain: values.chain.trim().toUpperCase()
+                  walletAddress: values.walletAddress.trim()
                 });
               }}
             >
@@ -516,29 +506,24 @@ export function PaymentConfigPage() {
                 />
               </Form.Item>
 
-              <Form.Item
-                label="Mint address"
-                name="mintAddress"
-                extra="Defaults to the current backend Solana network USDC mint when no merchant config exists yet."
-                rules={[
-                  { required: true, message: 'Please enter the mint address' },
-                  { max: 128, message: 'Mint address must be within 128 characters' }
-                ]}
-              >
-                <Input size="large" placeholder={defaultMintAddress || 'USDC mint address'} />
-              </Form.Item>
-
-              <Form.Item
-                label="Chain"
-                name="chain"
-                extra="StableFlow MVP currently uses the fixed address + reference strategy on Solana."
-                rules={[
-                  { required: true, message: 'Please enter the chain name' },
-                  { max: 32, message: 'Chain must be within 32 characters' }
-                ]}
-              >
-                <Input size="large" placeholder={DEFAULT_CHAIN} />
-              </Form.Item>
+              <Descriptions column={1} size="small" labelStyle={{ width: 160 }} className="payment-config-system-fields">
+                <Descriptions.Item label="Mint address">
+                  <Space direction="vertical" size={2}>
+                    <Typography.Text>{(configQuery.data?.mintAddress ?? defaultMintAddress) || '-'}</Typography.Text>
+                    <Typography.Text type="secondary">
+                      StableFlow locks this to the backend's current Solana network USDC mint.
+                    </Typography.Text>
+                  </Space>
+                </Descriptions.Item>
+                <Descriptions.Item label="Chain">
+                  <Space direction="vertical" size={2}>
+                    <Typography.Text>{configQuery.data?.chain ?? DEFAULT_CHAIN}</Typography.Text>
+                    <Typography.Text type="secondary">
+                      StableFlow MVP currently uses the fixed address + reference strategy on Solana only.
+                    </Typography.Text>
+                  </Space>
+                </Descriptions.Item>
+              </Descriptions>
 
               <Space wrap>
                 <Button type="primary" htmlType="submit" size="large" loading={saveMutation.isPending}>
@@ -550,15 +535,11 @@ export function PaymentConfigPage() {
                     form.resetFields();
                     if (configQuery.data) {
                       form.setFieldsValue({
-                        walletAddress: configQuery.data.walletAddress,
-                        mintAddress: configQuery.data.mintAddress,
-                        chain: configQuery.data.chain
+                        walletAddress: configQuery.data.walletAddress
                       });
                     } else if (hasNoConfig) {
                       form.setFieldsValue({
-                        walletAddress: '',
-                        mintAddress: defaultMintAddress,
-                        chain: DEFAULT_CHAIN
+                        walletAddress: ''
                       });
                     }
                   }}

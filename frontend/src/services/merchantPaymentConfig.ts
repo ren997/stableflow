@@ -24,8 +24,6 @@ export interface MerchantPaymentConfig {
 
 export interface MerchantPaymentConfigRequest {
   walletAddress: string;
-  mintAddress: string;
-  chain: string;
 }
 
 export interface MerchantWalletOwnershipChallenge {

@@ -58,7 +58,7 @@ class MerchantPaymentConfigControllerTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         objectMapper.writeValueAsString(
-                            new MerchantPaymentConfigRequestDto("wallet-1", "mint-1", "SOLANA")
+                            new MerchantPaymentConfigRequestDto("wallet-1")
                         )
                     )
             )
@@ -82,13 +82,13 @@ class MerchantPaymentConfigControllerTest {
     }
 
     @Test
-    void shouldRejectPaymentConfigWhenChainExceedsDatabaseLimit() throws Exception {
+    void shouldRejectPaymentConfigWhenWalletAddressExceedsDatabaseLimit() throws Exception {
         mockMvc.perform(
                 post("/api/merchant/payment-config")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         objectMapper.writeValueAsString(
-                            new MerchantPaymentConfigRequestDto("wallet-1", "mint-1", "S".repeat(33))
+                            new MerchantPaymentConfigRequestDto("w".repeat(129))
                         )
                     )
             )

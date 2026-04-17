@@ -12,6 +12,7 @@ import com.stableflow.merchant.vo.MerchantWalletOwnershipChallengeVo;
 import com.stableflow.merchant.vo.MerchantWalletOwnershipVerificationResultVo;
 import com.stableflow.merchant.vo.MerchantWalletOwnershipVerifyVo;
 import com.stableflow.system.config.MerchantOwnershipProperties;
+import com.stableflow.system.config.SolanaProperties;
 import com.stableflow.system.exception.BusinessException;
 import com.stableflow.system.exception.ErrorCode;
 import com.stableflow.system.security.CurrentMerchantProvider;
@@ -30,10 +31,13 @@ public class MerchantPaymentConfigServiceImpl
     extends ServiceImpl<MerchantPaymentConfigMapper, MerchantPaymentConfig>
     implements MerchantPaymentConfigService {
 
+    private static final String DEFAULT_CHAIN = "SOLANA";
+
     private final MerchantPaymentConfigMapper paymentConfigMapper;
     private final CurrentMerchantProvider currentMerchantProvider;
     private final MerchantOwnershipProperties merchantOwnershipProperties;
     private final MerchantWalletOwnershipVerifierService merchantWalletOwnershipVerifierService;
+    private final SolanaProperties solanaProperties;
 
     @Transactional
     @Override
@@ -48,8 +52,8 @@ public class MerchantPaymentConfigServiceImpl
         }
         boolean ownershipTargetChanged = isOwnershipTargetChanged(config, request);
         config.setWalletAddress(request.walletAddress());
-        config.setMintAddress(request.mintAddress());
-        config.setChain(request.chain());
+        config.setMintAddress(solanaProperties.resolvedUsdcMintAddress());
+        config.setChain(DEFAULT_CHAIN);
         config.setActiveFlag(Boolean.TRUE);
         if (ownershipTargetChanged) {
             resetOwnershipState(config);
@@ -181,7 +185,7 @@ public class MerchantPaymentConfigServiceImpl
     private boolean isOwnershipTargetChanged(MerchantPaymentConfig config, MerchantPaymentConfigRequestDto request) {
         return config.getId() == null
             || !Objects.equals(config.getWalletAddress(), request.walletAddress())
-            || !Objects.equals(config.getChain(), request.chain());
+            || !Objects.equals(config.getChain(), DEFAULT_CHAIN);
     }
 
     private void resetOwnershipState(MerchantPaymentConfig config) {
