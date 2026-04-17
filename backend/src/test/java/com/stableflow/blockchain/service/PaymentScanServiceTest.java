@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -175,6 +176,76 @@ class PaymentScanServiceTest {
         assertEquals(1, insertedCount);
         verify(paymentScanCursorService, never()).updateCursor("merchant-wallet-failed", null);
         verify(paymentScanCursorService).updateCursor("merchant-wallet-success", "sig-success");
+    }
+
+    @Test
+    void shouldSkipUnsupportedTransactionAndContinuePersistingValidCandidates() {
+        MerchantPaymentConfig paymentConfig = new MerchantPaymentConfig();
+        paymentConfig.setWalletAddress("merchant-wallet-3");
+
+        PaymentScanCursor cursor = new PaymentScanCursor();
+        cursor.setRecipientAddress("merchant-wallet-3");
+
+        when(paymentScanCursorService.getOrCreate("merchant-wallet-3")).thenReturn(cursor);
+        when(solanaClient.getSignaturesForAddress("merchant-wallet-3", 2, null)).thenReturn(
+            List.of(signature("sig-valid"), signature("sig-unsupported"))
+        );
+
+        SolanaTransactionDetailVo unsupported = new SolanaTransactionDetailVo();
+        unsupported.setSignature("sig-unsupported");
+        unsupported.setPayerAddress("payer-sig-unsupported");
+        unsupported.setTransferType("transfer");
+        unsupported.setBlockTime(OffsetDateTime.now());
+        unsupported.setRawPayload("{\"slot\":7}");
+        when(solanaClient.getTransaction("sig-unsupported")).thenReturn(unsupported);
+
+        when(solanaClient.getTransaction("sig-valid")).thenReturn(
+            detail("sig-valid", "ref-valid", "usdc-mint-1", "{\"slot\":8}")
+        );
+        when(paymentTransactionService.saveIfAbsent(any(PaymentTransaction.class))).thenReturn(true);
+
+        int insertedCount = paymentScanService.scanRecipientAddress(paymentConfig);
+
+        assertEquals(1, insertedCount);
+        verify(paymentTransactionService, times(1)).saveIfAbsent(any(PaymentTransaction.class));
+        verify(paymentScanCursorService).updateCursor("merchant-wallet-3", "sig-valid");
+    }
+
+    @Test
+    void shouldScanAssociatedTokenAccountForConfiguredMint() {
+        MerchantPaymentConfig paymentConfig = new MerchantPaymentConfig();
+        paymentConfig.setWalletAddress("9qtfKWYQUVXem2uZ9No4ZCZLCEmNDgA6Tk3u3bsbLwZv");
+        paymentConfig.setMintAddress("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+
+        PaymentScanCursor walletCursor = new PaymentScanCursor();
+        walletCursor.setRecipientAddress("9qtfKWYQUVXem2uZ9No4ZCZLCEmNDgA6Tk3u3bsbLwZv");
+
+        PaymentScanCursor ataCursor = new PaymentScanCursor();
+        ataCursor.setRecipientAddress("8wJqbV7Z1YCBo52nAcx1UQdtnNsE9jLVN5Nemuh64VrL");
+
+        when(paymentScanCursorService.getOrCreate("9qtfKWYQUVXem2uZ9No4ZCZLCEmNDgA6Tk3u3bsbLwZv")).thenReturn(walletCursor);
+        when(paymentScanCursorService.getOrCreate("8wJqbV7Z1YCBo52nAcx1UQdtnNsE9jLVN5Nemuh64VrL")).thenReturn(ataCursor);
+        when(solanaClient.getSignaturesForAddress("9qtfKWYQUVXem2uZ9No4ZCZLCEmNDgA6Tk3u3bsbLwZv", 2, null)).thenReturn(List.of());
+        when(solanaClient.getSignaturesForAddress("8wJqbV7Z1YCBo52nAcx1UQdtnNsE9jLVN5Nemuh64VrL", 2, null)).thenReturn(
+            List.of(signature("sig-ata-only"))
+        );
+        when(solanaClient.getTransaction("sig-ata-only")).thenReturn(
+            detail(
+                "sig-ata-only",
+                "ref-ata",
+                "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                "{\"slot\":108}"
+            )
+        );
+        when(paymentTransactionService.saveIfAbsent(any(PaymentTransaction.class))).thenReturn(true);
+
+        int insertedCount = paymentScanService.scanRecipientAddress(paymentConfig);
+
+        assertEquals(1, insertedCount);
+        verify(solanaClient).getSignaturesForAddress("9qtfKWYQUVXem2uZ9No4ZCZLCEmNDgA6Tk3u3bsbLwZv", 2, null);
+        verify(solanaClient).getSignaturesForAddress("8wJqbV7Z1YCBo52nAcx1UQdtnNsE9jLVN5Nemuh64VrL", 2, null);
+        verify(paymentScanCursorService).updateCursor("9qtfKWYQUVXem2uZ9No4ZCZLCEmNDgA6Tk3u3bsbLwZv", null);
+        verify(paymentScanCursorService).updateCursor("8wJqbV7Z1YCBo52nAcx1UQdtnNsE9jLVN5Nemuh64VrL", "sig-ata-only");
     }
 
     private SolanaTransactionSignatureVo signature(String signature) {

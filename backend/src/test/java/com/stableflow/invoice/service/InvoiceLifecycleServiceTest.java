@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
@@ -96,6 +97,37 @@ class InvoiceLifecycleServiceTest {
         assertNull(response.paymentInfo());
         verify(invoiceMapper).insert(any(Invoice.class));
         verify(invoicePaymentRequestMapper).insert(any(InvoicePaymentRequest.class));
+    }
+
+    @Test
+    void shouldGenerateSolanaCompatibleReferenceKeyWhenCreatingInvoice() {
+        MerchantPaymentConfig paymentConfig = paymentConfig();
+        CreateInvoiceRequestDto request = new CreateInvoiceRequestDto(
+            "Alice",
+            new BigDecimal("99.00"),
+            "Monthly fee",
+            utc("2026-03-25T10:00:00Z")
+        );
+
+        when(currentMerchantProvider.requireCurrentMerchantId()).thenReturn(10L);
+        when(merchantPaymentConfigService.getRequiredConfig(10L)).thenReturn(paymentConfig);
+        doAnswer(invocation -> {
+            Invoice invoice = invocation.getArgument(0);
+            invoice.setId(309L);
+            return 1;
+        }).when(invoiceMapper).insert(any(Invoice.class));
+
+        final InvoicePaymentRequest[] insertedPaymentRequest = new InvoicePaymentRequest[1];
+        doAnswer(invocation -> {
+            insertedPaymentRequest[0] = invocation.getArgument(0);
+            return 1;
+        }).when(invoicePaymentRequestMapper).insert(any(InvoicePaymentRequest.class));
+
+        invoiceService.createInvoice(request);
+
+        assertNotNull(insertedPaymentRequest[0]);
+        assertTrue(insertedPaymentRequest[0].getReferenceKey().matches("^[1-9A-HJ-NP-Za-km-z]{32,44}$"));
+        assertTrue(insertedPaymentRequest[0].getPaymentLink().contains("reference=" + insertedPaymentRequest[0].getReferenceKey()));
     }
 
     @Test

@@ -38,6 +38,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.security.SecureRandom;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +52,16 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
     private static final Logger log = LoggerFactory.getLogger(InvoiceServiceImpl.class);
     private static final String DEFAULT_CHAIN = "SOLANA";
     private static final String DEFAULT_CURRENCY = "USDC";
+    private static final char[] BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz".toCharArray();
+    private static final int[] BASE58_INDEXES = new int[128];
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    static {
+        java.util.Arrays.fill(BASE58_INDEXES, -1);
+        for (int i = 0; i < BASE58_ALPHABET.length; i++) {
+            BASE58_INDEXES[BASE58_ALPHABET[i]] = i;
+        }
+    }
 
     private final InvoiceMapper invoiceMapper;
     private final InvoicePaymentRequestMapper invoicePaymentRequestMapper;
@@ -101,6 +112,7 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
             invoicePaymentRequestMapper.insert(paymentRequest);
         } else {
             paymentRequest.setRecipientAddress(paymentConfig.getWalletAddress());
+            paymentRequest.setReferenceKey(generateReferenceKey());
             paymentRequest.setMintAddress(paymentConfig.getMintAddress());
             paymentRequest.setExpectedAmount(invoice.getAmount());
             paymentRequest.setLabel("StableFlow Invoice");
@@ -311,7 +323,9 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
     }
 
     private String generateReferenceKey() {
-        return "ref_" + UUID.randomUUID().toString().replace("-", "");
+        byte[] referenceBytes = new byte[32];
+        SECURE_RANDOM.nextBytes(referenceBytes);
+        return encodeBase58(referenceBytes);
     }
 
     private String generateInvoiceNo() {
@@ -326,6 +340,48 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
 
     private String resolveInvoiceChain(MerchantPaymentConfig paymentConfig) {
         return normalizeOrDefault(paymentConfig.getChain(), DEFAULT_CHAIN);
+    }
+
+    private String encodeBase58(byte[] input) {
+        if (input.length == 0) {
+            return "";
+        }
+
+        int zeros = 0;
+        while (zeros < input.length && input[zeros] == 0) {
+            zeros++;
+        }
+
+        byte[] encoded = new byte[input.length * 2];
+        int outputStart = encoded.length;
+        byte[] copy = java.util.Arrays.copyOf(input, input.length);
+
+        for (int inputStart = zeros; inputStart < copy.length; ) {
+            int remainder = divmod58(copy, inputStart);
+            encoded[--outputStart] = (byte) BASE58_ALPHABET[remainder];
+            if (copy[inputStart] == 0) {
+                inputStart++;
+            }
+        }
+
+        while (outputStart < encoded.length && encoded[outputStart] == BASE58_ALPHABET[0]) {
+            outputStart++;
+        }
+        while (--zeros >= 0) {
+            encoded[--outputStart] = (byte) BASE58_ALPHABET[0];
+        }
+        return new String(encoded, outputStart, encoded.length - outputStart, StandardCharsets.US_ASCII);
+    }
+
+    private int divmod58(byte[] number, int startAt) {
+        int remainder = 0;
+        for (int i = startAt; i < number.length; i++) {
+            int digit = number[i] & 0xFF;
+            int temp = remainder * 256 + digit;
+            number[i] = (byte) (temp / 58);
+            remainder = temp % 58;
+        }
+        return remainder;
     }
 
     private void applyStatusTransition(Invoice invoice, InvoiceStatusEnum targetStatus) {

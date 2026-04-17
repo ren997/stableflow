@@ -115,6 +115,11 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.6.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.sol4k</groupId>
+            <artifactId>sol4k</artifactId>
+            <version>0.5.15</version>
+        </dependency>
     </dependencies>
 
     <build>

@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.stableflow.system.persistence.JsonNodeJsonbTypeHandler;
 import com.stableflow.verification.enums.PaymentTransactionStatusEnum;
 import com.stableflow.verification.enums.PaymentVerificationResultEnum;
 import java.math.BigDecimal;
@@ -56,7 +56,7 @@ public class PaymentTransaction {
     private PaymentTransactionStatusEnum paymentStatus;
 
     /** Raw blockchain payload stored as JSON / 以 JSON 形式保存的原始链上载荷 */
-    @TableField(typeHandler = JacksonTypeHandler.class, jdbcType = JdbcType.OTHER)
+    @TableField(typeHandler = JsonNodeJsonbTypeHandler.class, jdbcType = JdbcType.OTHER)
     private JsonNode rawPayload;
 
     /** Record created time in UTC / 记录创建时间（UTC） */

@@ -17,9 +17,13 @@ import com.stableflow.system.exception.ErrorCode;
 import com.stableflow.verification.enums.PaymentTransactionStatusEnum;
 import com.stableflow.verification.enums.PaymentVerificationResultEnum;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.sol4k.PublicKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -28,9 +32,16 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class PaymentScanServiceImpl implements PaymentScanService {
 
-    private static final Logger log = LoggerFactory.getLogger(PaymentScanService.class);
+    private static final Logger log = LoggerFactory.getLogger(PaymentScanServiceImpl.class);
     private static final String DEFAULT_CURRENCY_USDC = "USDC";
     private static final String DEFAULT_CURRENCY_UNKNOWN = "UNKNOWN";
+    private static final Comparator<SolanaTransactionSignatureVo> SIGNATURE_PROCESS_ORDER =
+        Comparator.comparing(
+                SolanaTransactionSignatureVo::getBlockTime,
+                Comparator.nullsLast(Comparator.naturalOrder())
+            )
+            .thenComparing(SolanaTransactionSignatureVo::getSlot, Comparator.nullsLast(Comparator.naturalOrder()))
+            .thenComparing(SolanaTransactionSignatureVo::getSignature, Comparator.nullsLast(Comparator.naturalOrder()));
 
     private final SolanaClient solanaClient;
     private final MerchantPaymentConfigService merchantPaymentConfigService;
@@ -62,49 +73,133 @@ public class PaymentScanServiceImpl implements PaymentScanService {
     @Override
     public int scanRecipientAddress(MerchantPaymentConfig paymentConfig) {
         String recipientAddress = paymentConfig.getWalletAddress();
-        PaymentScanCursor cursor = paymentScanCursorService.getOrCreate(recipientAddress);
+        List<ScanTargetBatch> scanTargetBatches = prepareScanTargetBatches(paymentConfig);
+        Map<String, SolanaTransactionSignatureVo> uniqueCandidateSignatures = new LinkedHashMap<>();
+        for (ScanTargetBatch scanTargetBatch : scanTargetBatches) {
+            if (scanTargetBatch.candidateSignatures().isEmpty()) {
+                paymentScanCursorService.updateCursor(scanTargetBatch.address(), scanTargetBatch.cursor().getLastSeenSignature());
+                continue;
+            }
+            for (SolanaTransactionSignatureVo signatureVo : scanTargetBatch.candidateSignatures()) {
+                uniqueCandidateSignatures.putIfAbsent(signatureVo.getSignature(), signatureVo);
+            }
+        }
 
-        // 只拉取上次扫描游标之后出现的新签名，避免每次都全量回扫历史交易。
-        List<SolanaTransactionSignatureVo> candidateSignatures = fetchNewSignatures(
-            recipientAddress,
-            cursor.getLastSeenSignature(),
-            resolveBatchSize()
-        );
-
-        if (candidateSignatures.isEmpty()) {
-            paymentScanCursorService.updateCursor(recipientAddress, cursor.getLastSeenSignature());
+        if (uniqueCandidateSignatures.isEmpty()) {
             return 0;
         }
 
-        String newestProcessedSignature = candidateSignatures.getFirst().getSignature();
-        List<SolanaTransactionSignatureVo> signaturesToProcess = new ArrayList<>(candidateSignatures);
-        // 按从旧到新的顺序处理，后续验证和核销看到的交易时序会更稳定。
-        Collections.reverse(signaturesToProcess);
+        List<SolanaTransactionSignatureVo> signaturesToProcess = uniqueCandidateSignatures.values()
+            .stream()
+            .sorted(SIGNATURE_PROCESS_ORDER)
+            .toList();
 
         int insertedCount = 0;
         for (SolanaTransactionSignatureVo signatureVo : signaturesToProcess) {
-            SolanaTransactionDetailVo transactionDetail = solanaClient.getTransaction(signatureVo.getSignature());
-            if (transactionDetail == null) {
-                continue;
-            }
+            try {
+                SolanaTransactionDetailVo transactionDetail = solanaClient.getTransaction(signatureVo.getSignature());
+                if (transactionDetail == null) {
+                    continue;
+                }
 
-            if (paymentTransactionService.saveIfAbsent(toPaymentTransaction(transactionDetail))) {
-                insertedCount++;
+                PaymentTransaction paymentTransaction = toPaymentTransaction(transactionDetail);
+                if (paymentTransaction == null) {
+                    log.info(
+                        "Skipping unsupported scanned transaction, recipientAddress={}, txHash={}, transferType={}, mintAddress={}",
+                        recipientAddress,
+                        transactionDetail.getSignature(),
+                        transactionDetail.getTransferType(),
+                        transactionDetail.getMintAddress()
+                    );
+                    continue;
+                }
+
+                if (paymentTransactionService.saveIfAbsent(paymentTransaction)) {
+                    insertedCount++;
+                }
+            } catch (RuntimeException ex) {
+                log.error(
+                    "Failed to persist scanned transaction, recipientAddress={}, txHash={}",
+                    recipientAddress,
+                    signatureVo.getSignature(),
+                    ex
+                );
             }
         }
 
-        // 整个地址批次处理完成后再推进游标，避免处理中途失败导致交易漏扫。
-        paymentScanCursorService.updateCursor(recipientAddress, newestProcessedSignature);
+        // 每个扫描地址都在对应批次处理完成后再推进游标，避免处理中途失败导致交易漏扫。
+        for (ScanTargetBatch scanTargetBatch : scanTargetBatches) {
+            if (scanTargetBatch.candidateSignatures().isEmpty()) {
+                continue;
+            }
+            paymentScanCursorService.updateCursor(scanTargetBatch.address(), scanTargetBatch.newestSignature());
+        }
         log.info(
-            "Payment scan batch finished, merchantId={}, recipientAddress={}, previousCursor={}, newestCursor={}, newSignatures={}, inserted={}",
+            "Payment scan batch finished, merchantId={}, recipientAddress={}, scanTargets={}, newSignatures={}, inserted={}",
             paymentConfig.getMerchantId(),
             recipientAddress,
-            cursor.getLastSeenSignature(),
-            newestProcessedSignature,
-            candidateSignatures.size(),
+            scanTargetBatches.stream().map(ScanTargetBatch::address).toList(),
+            uniqueCandidateSignatures.size(),
             insertedCount
         );
         return insertedCount;
+    }
+
+    private List<ScanTargetBatch> prepareScanTargetBatches(MerchantPaymentConfig paymentConfig) {
+        List<ScanTargetBatch> scanTargetBatches = new ArrayList<>();
+        int batchSize = resolveBatchSize();
+
+        for (String scanTargetAddress : resolveScanTargetAddresses(paymentConfig)) {
+            PaymentScanCursor cursor = paymentScanCursorService.getOrCreate(scanTargetAddress);
+            // 每个扫描目标都维护独立游标，这样主钱包和 ATA 都能增量回扫各自的新交易。
+            List<SolanaTransactionSignatureVo> candidateSignatures = fetchNewSignatures(
+                scanTargetAddress,
+                cursor.getLastSeenSignature(),
+                batchSize
+            );
+            scanTargetBatches.add(
+                new ScanTargetBatch(
+                    scanTargetAddress,
+                    cursor,
+                    candidateSignatures,
+                    candidateSignatures.isEmpty() ? null : candidateSignatures.getFirst().getSignature()
+                )
+            );
+        }
+        return scanTargetBatches;
+    }
+
+    private List<String> resolveScanTargetAddresses(MerchantPaymentConfig paymentConfig) {
+        LinkedHashSet<String> scanTargetAddresses = new LinkedHashSet<>();
+        addIfPresent(scanTargetAddresses, paymentConfig.getWalletAddress());
+        addIfPresent(
+            scanTargetAddresses,
+            deriveAssociatedTokenAddress(paymentConfig.getWalletAddress(), resolveScanMintAddress(paymentConfig))
+        );
+        return new ArrayList<>(scanTargetAddresses);
+    }
+
+    private String resolveScanMintAddress(MerchantPaymentConfig paymentConfig) {
+        return hasText(paymentConfig.getMintAddress()) ? paymentConfig.getMintAddress() : solanaProperties.resolvedUsdcMintAddress();
+    }
+
+    private String deriveAssociatedTokenAddress(String walletAddress, String mintAddress) {
+        if (!hasText(walletAddress) || !hasText(mintAddress)) {
+            return null;
+        }
+        try {
+            return PublicKey.findProgramDerivedAddress(new PublicKey(walletAddress), new PublicKey(mintAddress))
+                .getPublicKey()
+                .toBase58();
+        } catch (RuntimeException ex) {
+            log.warn(
+                "Failed to derive associated token account, walletAddress={}, mintAddress={}, reason={}",
+                walletAddress,
+                mintAddress,
+                ex.getMessage()
+            );
+            return null;
+        }
     }
 
     private List<SolanaTransactionSignatureVo> fetchNewSignatures(String address, String lastSeenSignature, int batchSize) {
@@ -138,6 +233,10 @@ public class PaymentScanServiceImpl implements PaymentScanService {
     }
 
     private PaymentTransaction toPaymentTransaction(SolanaTransactionDetailVo transactionDetail) {
+        if (!hasText(transactionDetail.getRecipientAddress()) || transactionDetail.getAmount() == null) {
+            return null;
+        }
+
         // 把链上解析结果转换成数据库持久化模型，供后续验证和核销阶段继续使用。
         PaymentTransaction paymentTransaction = new PaymentTransaction();
         paymentTransaction.setTxHash(transactionDetail.getSignature());
@@ -180,5 +279,23 @@ public class PaymentScanServiceImpl implements PaymentScanService {
                 "Failed to parse Solana raw payload: " + ex.getOriginalMessage()
             );
         }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private void addIfPresent(LinkedHashSet<String> values, String candidate) {
+        if (hasText(candidate)) {
+            values.add(candidate);
+        }
+    }
+
+    private record ScanTargetBatch(
+        String address,
+        PaymentScanCursor cursor,
+        List<SolanaTransactionSignatureVo> candidateSignatures,
+        String newestSignature
+    ) {
     }
 }
