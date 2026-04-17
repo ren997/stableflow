@@ -35,12 +35,14 @@ import {
   getInvoicePaymentProof,
   getInvoicePaymentStatus,
   listInvoices,
+  manualSubmitInvoicePayment,
   type CreateInvoiceRequest,
   type InvoiceDetail,
   type InvoicePaymentInfo,
   type InvoicePaymentProof,
   type InvoicePaymentStatus,
-  type InvoiceListItem
+  type InvoiceListItem,
+  type ManualSubmitPaymentResult
 } from '../../services/invoice';
 import { getMerchantPaymentConfig } from '../../services/merchantPaymentConfig';
 import { clearSession } from '../../services/session';
@@ -348,9 +350,13 @@ function PaymentProofCard({
               </Typography.Text>
             </Descriptions.Item>
             <Descriptions.Item label="Reference">
-              <Typography.Text copyable={{ text: paymentProof.referenceKey }}>
-                {paymentProof.referenceKey}
-              </Typography.Text>
+              {paymentProof.referenceKey ? (
+                <Typography.Text copyable={{ text: paymentProof.referenceKey }}>
+                  {paymentProof.referenceKey}
+                </Typography.Text>
+              ) : (
+                '-'
+              )}
             </Descriptions.Item>
             <Descriptions.Item label="Verification">
               {paymentProof.verificationResult || '-'}
@@ -439,6 +445,134 @@ function PaymentProofCard({
   );
 }
 
+function ManualPaymentFallbackCard({
+  invoice,
+  paymentInfo,
+  submitResult,
+  submitLoading,
+  onSubmit
+}: {
+  invoice: InvoiceDetail;
+  paymentInfo: InvoicePaymentInfo | null;
+  submitResult: ManualSubmitPaymentResult | null;
+  submitLoading: boolean;
+  onSubmit: (txHash: string) => void;
+}) {
+  const [form] = Form.useForm<{ txHash: string }>();
+
+  return (
+    <Card
+      className="glass-card payment-manual-card"
+      title="Manual transfer fallback"
+      extra={<InvoiceStatusTag status={invoice.status} />}
+    >
+      {paymentInfo ? (
+        <>
+          <Alert
+            type="info"
+            showIcon
+            message="Use this path only when the wallet cannot open the payment link or scan flow."
+            description="Transfer with the invoice amount and mint, then paste the confirmed tx hash here. Transactions with a conflicting on-chain reference will be rejected."
+            style={{ marginBottom: 16 }}
+          />
+
+          <Descriptions column={1} size="small" labelStyle={{ width: 140 }}>
+            <Descriptions.Item label="Recipient">
+              <Typography.Text copyable={{ text: paymentInfo.recipientAddress }}>
+                {paymentInfo.recipientAddress}
+              </Typography.Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Reference">
+              <Typography.Text copyable={{ text: paymentInfo.referenceKey }}>
+                {paymentInfo.referenceKey}
+              </Typography.Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Mint">
+              <Typography.Text copyable={{ text: paymentInfo.mintAddress }}>
+                {paymentInfo.mintAddress}
+              </Typography.Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Amount">
+              {formatAmount(paymentInfo.expectedAmount)} {invoice.currency}
+            </Descriptions.Item>
+          </Descriptions>
+
+          <Form
+            form={form}
+            layout="vertical"
+            requiredMark={false}
+            style={{ marginTop: 16 }}
+            onFinish={(values) => {
+              onSubmit(values.txHash.trim());
+            }}
+          >
+            <Form.Item
+              label="Confirmed tx hash"
+              name="txHash"
+              rules={[
+                { required: true, message: 'Please paste the transaction hash' },
+                { max: 120, message: 'Transaction hash looks too long' }
+              ]}
+            >
+              <Input
+                placeholder="Paste the confirmed Solana transaction hash"
+                disabled={submitLoading}
+              />
+            </Form.Item>
+            <Space wrap>
+              <Button type="primary" htmlType="submit" loading={submitLoading}>
+                Submit tx hash
+              </Button>
+              <Button onClick={() => form.resetFields()} disabled={submitLoading}>
+                Clear
+              </Button>
+            </Space>
+          </Form>
+
+          {submitResult ? (
+            <Alert
+              className="manual-submit-result"
+              type={
+                submitResult.verificationResult === 'PAID'
+                || submitResult.verificationResult === 'PARTIALLY_PAID'
+                || submitResult.verificationResult === 'OVERPAID'
+                ? 'success'
+                : 'warning'
+              }
+              showIcon
+              message={submitResult.message}
+              description={
+                <Descriptions column={1} size="small" labelStyle={{ width: 156 }} style={{ marginTop: 12 }}>
+                  <Descriptions.Item label="Verification">
+                    {submitResult.verificationResult}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Tx status">
+                    {submitResult.paymentTransactionStatus}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Reference">
+                    {submitResult.referenceKey || '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Reconciled count">
+                    {submitResult.reconciledCount}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Invoice status">
+                    <InvoiceStatusTag status={submitResult.paymentStatus.status} />
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Latest tx hash">
+                    {submitResult.paymentStatus.latestTxHash || '-'}
+                  </Descriptions.Item>
+                </Descriptions>
+              }
+            />
+          ) : null}
+        </>
+      ) : (
+        <Empty description="Manual transfer fallback will appear after payment info is available." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+      )}
+    </Card>
+  );
+}
+
 function InvoiceDetailCard({
   invoice,
   loading,
@@ -517,6 +651,7 @@ export function InvoicesPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [manualSubmitResult, setManualSubmitResult] = useState<ManualSubmitPaymentResult | null>(null);
   const runtimeConfigQuery = useQuery({
     queryKey: ['system-runtime-config'],
     queryFn: getSystemRuntimeConfig,
@@ -627,6 +762,18 @@ export function InvoicesPage() {
     }
   });
 
+  const manualSubmitMutation = useMutation({
+    mutationFn: (requestBody: { invoiceId: number; txHash: string }) => manualSubmitInvoicePayment(requestBody),
+    onSuccess: (result) => {
+      setManualSubmitResult(result);
+      queryClient.invalidateQueries({ queryKey: ['invoice-detail', result.invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-list'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-payment-status', result.invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-payment-proof', result.invoiceId] });
+      message.success('Transaction hash submitted');
+    }
+  });
+
   const paymentConfigError = paymentConfigQuery.error instanceof ApiError ? paymentConfigQuery.error : null;
   const missingPaymentConfig = paymentConfigError?.code === PAYMENT_CONFIG_NOT_FOUND;
   const activeInvoiceChain = paymentConfigQuery.data?.chain ?? DEFAULT_CHAIN;
@@ -642,7 +789,8 @@ export function InvoicesPage() {
       paymentStatusQuery.error,
       createMutation.error,
       activateMutation.error,
-      cancelMutation.error
+      cancelMutation.error,
+      manualSubmitMutation.error
     ];
     const unauthorized = errors.find((error) => error instanceof ApiError && error.status === 401);
     if (unauthorized instanceof ApiError) {
@@ -661,8 +809,13 @@ export function InvoicesPage() {
     runtimeConfigQuery.error,
     paymentInfoQuery.error,
     paymentProofQuery.error,
-    paymentStatusQuery.error
+    paymentStatusQuery.error,
+    manualSubmitMutation.error
   ]);
+
+  useEffect(() => {
+    setManualSubmitResult(null);
+  }, [selectedInvoiceId]);
 
   useEffect(() => {
     createForm.setFieldsValue({
@@ -944,6 +1097,18 @@ export function InvoicesPage() {
                   }}
                   activateLoading={activateMutation.isPending}
                 />
+                <ManualPaymentFallbackCard
+                  invoice={selectedInvoice}
+                  paymentInfo={paymentInfoQuery.data ?? selectedInvoice.paymentInfo ?? null}
+                  submitResult={manualSubmitResult}
+                  submitLoading={manualSubmitMutation.isPending}
+                  onSubmit={(txHash) => {
+                    if (!selectedInvoiceId) {
+                      return;
+                    }
+                    manualSubmitMutation.mutate({ invoiceId: selectedInvoiceId, txHash });
+                  }}
+                />
                 <PaymentStatusCard
                   paymentStatus={paymentStatusQuery.data ?? null}
                   loading={paymentStatusQuery.isLoading || paymentStatusQuery.isFetching}
@@ -1061,6 +1226,12 @@ export function InvoicesPage() {
       {cancelMutation.error instanceof ApiError && cancelMutation.error.status !== 401 ? (
         <Card className="error-card">
           <Typography.Text type="danger">{cancelMutation.error.message}</Typography.Text>
+        </Card>
+      ) : null}
+
+      {manualSubmitMutation.error instanceof ApiError && manualSubmitMutation.error.status !== 401 ? (
+        <Card className="error-card">
+          <Typography.Text type="danger">{manualSubmitMutation.error.message}</Typography.Text>
         </Card>
       ) : null}
     </div>

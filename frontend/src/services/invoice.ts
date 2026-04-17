@@ -61,7 +61,7 @@ export interface InvoicePaymentProof {
   publicId: string;
   invoiceNo: string;
   txHash: string;
-  referenceKey: string;
+  referenceKey?: string | null;
   payerAddress?: string | null;
   recipientAddress?: string | null;
   mintAddress: string;
@@ -89,6 +89,23 @@ export interface InvoiceDetail {
   paidAt?: string | null;
   createdAt: string;
   paymentInfo?: InvoicePaymentInfo | null;
+}
+
+export interface ManualSubmitPaymentRequest {
+  invoiceId: number;
+  txHash: string;
+}
+
+export interface ManualSubmitPaymentResult {
+  invoiceId: number;
+  paymentTransactionId: number;
+  txHash: string;
+  referenceKey?: string | null;
+  verificationResult: string;
+  paymentTransactionStatus: string;
+  reconciledCount: number;
+  paymentStatus: InvoicePaymentStatus;
+  message: string;
 }
 
 export function createInvoice(requestBody: CreateInvoiceRequest): Promise<InvoiceDetail> {
@@ -148,5 +165,12 @@ export function getInvoicePaymentProof(id: number): Promise<InvoicePaymentProof>
   return request<InvoicePaymentProof>('/invoices/payment-proof', {
     method: 'POST',
     body: JSON.stringify({ id })
+  });
+}
+
+export function manualSubmitInvoicePayment(requestBody: ManualSubmitPaymentRequest): Promise<ManualSubmitPaymentResult> {
+  return request<ManualSubmitPaymentResult>('/invoices/payment/manual-submit', {
+    method: 'POST',
+    body: JSON.stringify(requestBody)
   });
 }

@@ -9,13 +9,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stableflow.invoice.dto.ActivateInvoiceRequestDto;
 import com.stableflow.invoice.dto.InvoiceIdQueryDto;
 import com.stableflow.invoice.dto.InvoiceListQueryDto;
+import com.stableflow.invoice.dto.ManualSubmitPaymentRequestDto;
 import com.stableflow.invoice.dto.ReconcileInvoiceRequestDto;
 import com.stableflow.invoice.dto.UpdateInvoiceRequestDto;
 import com.stableflow.invoice.enums.ExceptionTagEnum;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import com.stableflow.invoice.service.InvoiceService;
+import com.stableflow.invoice.service.ManualInvoicePaymentService;
 import com.stableflow.invoice.vo.InvoiceDetailVo;
 import com.stableflow.invoice.vo.InvoiceListItemVo;
+import com.stableflow.invoice.vo.ManualSubmitPaymentVo;
 import com.stableflow.invoice.vo.PaymentInfoVo;
 import com.stableflow.invoice.vo.PaymentStatusVo;
 import com.stableflow.reconciliation.service.PaymentProofService;
@@ -46,6 +49,9 @@ class InvoiceControllerTest {
     private InvoiceService invoiceService;
 
     @Mock
+    private ManualInvoicePaymentService manualInvoicePaymentService;
+
+    @Mock
     private PaymentProofService paymentProofService;
 
     @Mock
@@ -59,7 +65,9 @@ class InvoiceControllerTest {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new InvoiceController(invoiceService, paymentProofService, reconciliationService))
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                new InvoiceController(invoiceService, manualInvoicePaymentService, paymentProofService, reconciliationService)
+            )
             .setControllerAdvice(new GlobalExceptionHandler())
             .setValidator(validator)
             .build();
@@ -248,6 +256,24 @@ class InvoiceControllerTest {
     }
 
     @Test
+    void shouldSubmitManualPaymentViaPost() throws Exception {
+        when(manualInvoicePaymentService.submitPayment(new ManualSubmitPaymentRequestDto(1L, "tx-manual"))).thenReturn(
+            manualSubmitPaymentVo()
+        );
+
+        mockMvc.perform(
+                post("/api/invoices/payment/manual-submit")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new ManualSubmitPaymentRequestDto(1L, "tx-manual")))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.invoiceId").value(1L))
+            .andExpect(jsonPath("$.data.txHash").value("tx-manual"))
+            .andExpect(jsonPath("$.data.verificationResult").value("PAID"))
+            .andExpect(jsonPath("$.data.paymentStatus.status").value("PAID"));
+    }
+
+    @Test
     void shouldTriggerManualReconcileViaPost() throws Exception {
         when(reconciliationService.reconcileInvoice(1L)).thenReturn(
             new ReconcileInvoiceVo(1L, 1, paymentStatusVo())
@@ -366,6 +392,20 @@ class InvoiceControllerTest {
             com.stableflow.reconciliation.enums.ReconciliationStatusEnum.SUCCESS,
             "Invoice marked as paid.",
             OffsetDateTime.parse("2026-03-20T11:05:00Z")
+        );
+    }
+
+    private ManualSubmitPaymentVo manualSubmitPaymentVo() {
+        return new ManualSubmitPaymentVo(
+            1L,
+            10L,
+            "tx-manual",
+            null,
+            PaymentVerificationResultEnum.PAID,
+            PaymentTransactionStatusEnum.PAID,
+            1,
+            paymentStatusVo(),
+            "Transaction amount matches the invoice expected amount. The invoice was matched through manual tx hash submission because the transaction carries no on-chain reference."
         );
     }
 }

@@ -28,6 +28,18 @@ public class PaymentTransactionServiceImpl
         ) > 0;
     }
 
+    @Override
+    public PaymentTransaction getByTxHash(String txHash) {
+        if (txHash == null || txHash.isBlank()) {
+            return null;
+        }
+        return paymentTransactionMapper.selectOne(
+            new LambdaQueryWrapper<PaymentTransaction>()
+                .eq(PaymentTransaction::getTxHash, txHash)
+                .last("LIMIT 1")
+        );
+    }
+
     @Transactional
     @Override
     public boolean saveIfAbsent(PaymentTransaction paymentTransaction) {

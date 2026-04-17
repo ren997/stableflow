@@ -228,9 +228,14 @@ body {
 }
 
 .payment-info-card,
+.payment-manual-card,
 .payment-status-card,
 .payment-proof-card {
   width: 100%;
+}
+
+.manual-submit-result {
+  margin-top: 16px;
 }
 
 .invoice-qr-shell {

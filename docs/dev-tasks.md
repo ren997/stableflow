@@ -741,6 +741,24 @@
   - `verifierReady` 返回真实能力状态
   - 不改变当前 `fixed address + reference` 的支付主归因模型
 
+#### T815 手动转账兜底与 txHash 提交认领
+
+- 状态：`TODO`
+
+- 优先级：P0.5
+- 依赖：T404, T503
+- 任务说明：当前扫码支付主流程已跑通，但不同钱包对 `solana:` payment link 与 Solana Pay 参数支持不一致；需要补一个不依赖扫码的手动转账兜底路径，允许付款方提交 `txHash`，由系统拉链上交易并尝试自动归账或进入人工处理
+- 交付物：
+  - `POST /api/invoices/payment/manual-submit`
+  - 支付页 `Manual transfer fallback` 区块
+  - 手动提交结果模型与说明文案
+- 完成标准：
+  - 用户可在支付页查看收款地址、金额、mint、reference，并手动完成转账
+  - 用户提交 `txHash` 后，后端可拉取链上交易并校验 `recipient`、`mint`、`amount`、`reference`
+  - 若交易满足自动归因条件，则继续复用现有 verification 与 reconciliation 流程
+  - 若交易有效但缺少可用 `reference`，则进入 `MANUAL_REVIEW_REQUIRED` 等人工处理状态，而不是丢单
+  - 不改变当前 `fixed address + reference` 作为主归因模型，只补充兼容性兜底路径
+
 ### 15.2 工程基础补充
 
 #### T811 SpringDoc / Swagger UI 接入
