@@ -77,8 +77,6 @@ const statusOptions = [
 interface InvoiceFormValues {
   customerName: string;
   amount: number;
-  currency: string;
-  chain: string;
   description?: string;
   expireAt: Dayjs;
 }
@@ -599,8 +597,6 @@ export function InvoicesPage() {
       queryClient.setQueryData(['invoice-detail', invoice.id], invoice);
       createForm.resetFields();
       createForm.setFieldsValue({
-        currency: DEFAULT_CURRENCY,
-        chain: DEFAULT_CHAIN,
         expireAt: dayjs().add(1, 'day')
       });
       message.success('Invoice created');
@@ -633,6 +629,7 @@ export function InvoicesPage() {
 
   const paymentConfigError = paymentConfigQuery.error instanceof ApiError ? paymentConfigQuery.error : null;
   const missingPaymentConfig = paymentConfigError?.code === PAYMENT_CONFIG_NOT_FOUND;
+  const activeInvoiceChain = paymentConfigQuery.data?.chain ?? DEFAULT_CHAIN;
 
   useEffect(() => {
     const errors = [
@@ -669,8 +666,6 @@ export function InvoicesPage() {
 
   useEffect(() => {
     createForm.setFieldsValue({
-      currency: DEFAULT_CURRENCY,
-      chain: DEFAULT_CHAIN,
       expireAt: dayjs().add(1, 'day')
     });
   }, [createForm]);
@@ -799,8 +794,6 @@ export function InvoicesPage() {
                 const payload: CreateInvoiceRequest = {
                   customerName: values.customerName.trim(),
                   amount: values.amount,
-                  currency: values.currency.trim().toUpperCase(),
-                  chain: values.chain.trim().toUpperCase(),
                   description: values.description?.trim() || undefined,
                   expireAt: values.expireAt.toDate().toISOString()
                 };
@@ -848,13 +841,8 @@ export function InvoicesPage() {
                 <Col xs={24} md={12}>
                   <Form.Item
                     label="Currency"
-                    name="currency"
-                    rules={[
-                      { required: true, message: 'Please enter the currency' },
-                      { max: 16, message: 'Currency must be within 16 characters' }
-                    ]}
                   >
-                    <Input size="large" placeholder={DEFAULT_CURRENCY} disabled={missingPaymentConfig} />
+                    <Input size="large" value={DEFAULT_CURRENCY} disabled />
                   </Form.Item>
                 </Col>
               </Row>
@@ -863,13 +851,8 @@ export function InvoicesPage() {
                 <Col xs={24} md={12}>
                   <Form.Item
                     label="Chain"
-                    name="chain"
-                    rules={[
-                      { required: true, message: 'Please enter the chain name' },
-                      { max: 32, message: 'Chain must be within 32 characters' }
-                    ]}
                   >
-                    <Input size="large" placeholder={DEFAULT_CHAIN} disabled={missingPaymentConfig} />
+                    <Input size="large" value={activeInvoiceChain} disabled />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
@@ -920,8 +903,6 @@ export function InvoicesPage() {
                     createForm.setFieldsValue({
                       customerName: '',
                       amount: undefined,
-                      currency: DEFAULT_CURRENCY,
-                      chain: DEFAULT_CHAIN,
                       description: '',
                       expireAt: dayjs().add(1, 'day')
                     })

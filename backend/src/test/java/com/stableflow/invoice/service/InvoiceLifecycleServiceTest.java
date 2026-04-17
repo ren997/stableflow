@@ -78,8 +78,6 @@ class InvoiceLifecycleServiceTest {
         CreateInvoiceRequestDto request = new CreateInvoiceRequestDto(
             "Alice",
             new BigDecimal("99.00"),
-            "USDC",
-            "SOLANA",
             "Monthly fee",
             utc("2026-03-25T10:00:00Z")
         );

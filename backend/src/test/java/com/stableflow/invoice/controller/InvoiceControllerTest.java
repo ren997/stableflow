@@ -125,8 +125,6 @@ class InvoiceControllerTest {
                                 1L,
                                 "Alice",
                                 new BigDecimal("99.00"),
-                                "USDC",
-                                "SOLANA",
                                 "Monthly fee",
                                 OffsetDateTime.now().plusDays(1)
                             )
@@ -148,8 +146,6 @@ class InvoiceControllerTest {
                             new com.stableflow.invoice.dto.CreateInvoiceRequestDto(
                                 "Alice",
                                 new BigDecimal("99.00"),
-                                "USDC",
-                                "SOLANA",
                                 "x".repeat(513),
                                 OffsetDateTime.parse("2026-03-21T10:00:00Z")
                             )
@@ -170,8 +166,6 @@ class InvoiceControllerTest {
                         {
                           "customerName": "Alice",
                           "amount": "not-a-number",
-                          "currency": "USDC",
-                          "chain": "SOLANA",
                           "description": "Monthly fee",
                           "expireAt": "2026-03-21T10:00:00Z"
                         }

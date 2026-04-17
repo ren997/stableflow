@@ -18,10 +18,6 @@ public record UpdateInvoiceRequestDto(
     @NotBlank @Size(max = 128) String customerName,
     @Schema(description = "Expected payment amount / 应付金额", example = "99.00")
     @NotNull @DecimalMin("0.000001") BigDecimal amount,
-    @Schema(description = "Currency code / 币种代码", example = "USDC")
-    @Size(max = 16) String currency,
-    @Schema(description = "Blockchain name / 链名称", example = "SOLANA")
-    @Size(max = 32) String chain,
     @Schema(description = "Invoice description / 账单描述", example = "Monthly subscription fee")
     @Size(max = 512) String description,
     @Schema(description = "Invoice expiry time in UTC / 账单过期时间（UTC）", example = "2026-03-18T12:00:00Z")

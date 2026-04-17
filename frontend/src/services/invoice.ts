@@ -10,8 +10,6 @@ export interface PageResult<T> {
 export interface CreateInvoiceRequest {
   customerName: string;
   amount: number;
-  currency: string;
-  chain: string;
   description?: string;
   expireAt: string;
 }

@@ -72,8 +72,8 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
         invoice.setInvoiceNo(generateInvoiceNo());
         invoice.setCustomerName(request.customerName());
         invoice.setAmount(request.amount());
-        invoice.setCurrency(normalizeOrDefault(request.currency(), DEFAULT_CURRENCY));
-        invoice.setChain(normalizeOrDefault(request.chain(), DEFAULT_CHAIN));
+        invoice.setCurrency(DEFAULT_CURRENCY);
+        invoice.setChain(resolveInvoiceChain(paymentConfig));
         invoice.setDescription(request.description());
         invoice.setStatus(InvoiceStatusEnum.DRAFT);
         invoice.setExpireAt(request.expireAt());
@@ -137,8 +137,6 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
 
         invoice.setCustomerName(request.customerName());
         invoice.setAmount(request.amount());
-        invoice.setCurrency(normalizeOrDefault(request.currency(), DEFAULT_CURRENCY));
-        invoice.setChain(normalizeOrDefault(request.chain(), DEFAULT_CHAIN));
         invoice.setDescription(request.description());
         invoice.setExpireAt(request.expireAt());
 
@@ -324,6 +322,10 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
 
     private String normalizeOrDefault(String value, String defaultValue) {
         return value == null || value.isBlank() ? defaultValue : value.toUpperCase(Locale.ROOT);
+    }
+
+    private String resolveInvoiceChain(MerchantPaymentConfig paymentConfig) {
+        return normalizeOrDefault(paymentConfig.getChain(), DEFAULT_CHAIN);
     }
 
     private void applyStatusTransition(Invoice invoice, InvoiceStatusEnum targetStatus) {
