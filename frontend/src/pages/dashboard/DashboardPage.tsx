@@ -95,6 +95,9 @@ export function DashboardPage() {
           </Typography.Paragraph>
         </div>
         <Space wrap>
+          <Button onClick={() => navigate('/invoices/exceptions')}>
+            Exception queue
+          </Button>
           <Button type="primary" ghost onClick={() => navigate('/invoices')}>
             Invoices
           </Button>
@@ -122,7 +125,13 @@ export function DashboardPage() {
           </Card>
         </Col>
         <Col xs={12} lg={6}>
-          <Card>
+          <Card
+            extra={(
+              <Button type="link" size="small" onClick={() => navigate('/invoices/exceptions')}>
+                Open
+              </Button>
+            )}
+          >
             <Statistic title="Exceptions" value={summary?.exceptionCount ?? 0} />
           </Card>
         </Col>

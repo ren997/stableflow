@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { ExceptionInvoicesPage } from '../pages/exceptions/ExceptionInvoicesPage';
 import { clearSession, getAccessToken } from '../services/session';
 import { DashboardPage } from '../pages/dashboard/DashboardPage';
 import { InvoicesPage } from '../pages/invoices/InvoicesPage';
@@ -50,6 +51,7 @@ export function AppRouter() {
       </Route>
       <Route element={<RequireAuth />}>
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/invoices/exceptions" element={<ExceptionInvoicesPage />} />
         <Route path="/invoices" element={<InvoicesPage />} />
         <Route path="/invoices/:invoiceId" element={<InvoicesPage />} />
         <Route path="/settings/payment-config" element={<PaymentConfigPage />} />

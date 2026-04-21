@@ -1,4 +1,5 @@
 import { request } from './http';
+import type { PageResult } from './invoice';
 
 export interface DashboardSummary {
   totalInvoices: number;
@@ -11,6 +12,25 @@ export interface DashboardSummary {
 export interface DashboardStatusCountItem {
   status: string;
   count: number;
+}
+
+export interface DashboardExceptionInvoiceQuery {
+  exceptionTag?: string;
+  page?: number;
+  size?: number;
+}
+
+export interface DashboardExceptionInvoiceItem {
+  id: number;
+  publicId: string;
+  invoiceNo: string;
+  customerName: string;
+  amount: number | string;
+  currency: string;
+  status: string;
+  exceptionTags: string[];
+  expireAt?: string | null;
+  createdAt: string;
 }
 
 function normalizeStatusCountItems(payload: unknown): DashboardStatusCountItem[] {
@@ -64,4 +84,17 @@ export async function getDashboardStatusDistribution(): Promise<DashboardStatusC
     method: 'POST'
   });
   return normalizeStatusCountItems(payload);
+}
+
+export function getDashboardExceptionInvoices(
+  query: DashboardExceptionInvoiceQuery
+): Promise<PageResult<DashboardExceptionInvoiceItem>> {
+  return request<PageResult<DashboardExceptionInvoiceItem>>('/dashboard/invoices/exceptions', {
+    method: 'POST',
+    body: JSON.stringify({
+      exceptionTag: query.exceptionTag,
+      page: query.page ?? 1,
+      size: query.size ?? 10
+    })
+  });
 }
