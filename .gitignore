@@ -31,3 +31,4 @@ frontend/tsconfig.tsbuildinfo
 backend/target/
 *.iml
 backend/src/main/resources/application-local.yml
+.env
