@@ -108,6 +108,12 @@ export interface ManualSubmitPaymentResult {
   message: string;
 }
 
+export interface ReconcileInvoiceResult {
+  invoiceId: number;
+  reconciledCount: number;
+  paymentStatus: InvoicePaymentStatus;
+}
+
 export function createInvoice(requestBody: CreateInvoiceRequest): Promise<InvoiceDetail> {
   return request<InvoiceDetail>('/invoices', {
     method: 'POST',
@@ -172,5 +178,12 @@ export function manualSubmitInvoicePayment(requestBody: ManualSubmitPaymentReque
   return request<ManualSubmitPaymentResult>('/invoices/payment/manual-submit', {
     method: 'POST',
     body: JSON.stringify(requestBody)
+  });
+}
+
+export function reconcileInvoice(id: number): Promise<ReconcileInvoiceResult> {
+  return request<ReconcileInvoiceResult>('/invoices/reconcile', {
+    method: 'POST',
+    body: JSON.stringify({ id })
   });
 }

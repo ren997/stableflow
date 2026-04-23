@@ -36,13 +36,15 @@ import {
   getInvoicePaymentStatus,
   listInvoices,
   manualSubmitInvoicePayment,
+  reconcileInvoice,
   type CreateInvoiceRequest,
   type InvoiceDetail,
   type InvoicePaymentInfo,
   type InvoicePaymentProof,
   type InvoicePaymentStatus,
   type InvoiceListItem,
-  type ManualSubmitPaymentResult
+  type ManualSubmitPaymentResult,
+  type ReconcileInvoiceResult
 } from '../../services/invoice';
 import { getMerchantPaymentConfig } from '../../services/merchantPaymentConfig';
 import { clearSession } from '../../services/session';
@@ -52,6 +54,8 @@ const PAYMENT_CONFIG_NOT_FOUND = 40402;
 const PAYMENT_PROOF_NOT_FOUND = 40404;
 const DEFAULT_CHAIN = 'SOLANA';
 const DEFAULT_CURRENCY = 'USDC';
+const MANUAL_TRANSFER_FALLBACK_ID = 'manual-transfer-fallback';
+const EXCEPTION_INVOICE_STATUSES = new Set(['PARTIALLY_PAID', 'OVERPAID', 'EXPIRED', 'FAILED_RECONCILIATION']);
 
 const statusMeta: Record<string, { label: string; color: string }> = {
   DRAFT: { label: 'Draft', color: 'default' },
@@ -75,6 +79,72 @@ const statusOptions = [
   { value: 'EXPIRED', label: 'Expired' },
   { value: 'FAILED_RECONCILIATION', label: 'Failed' }
 ];
+
+function formatExceptionTagLabel(tag: string): string {
+  return tag
+    .toLowerCase()
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function hasReferenceAttributionException(exceptionTags: string[]): boolean {
+  return exceptionTags.some((tag) => ['MISSING_REFERENCE', 'INVALID_REFERENCE', 'UNMATCHED_PAYMENT'].includes(tag));
+}
+
+function getExceptionHandlingMeta(invoiceStatus: string, exceptionTags: string[]) {
+  if (invoiceStatus === 'FAILED_RECONCILIATION') {
+    return {
+      message: 'Automatic reconciliation did not finish cleanly for this invoice.',
+      recommendation: 'Retry reconciliation to re-run any pending verified transactions for this invoice.',
+      actionLabel: 'Retry reconciliation' as const,
+      actionType: 'reconcile' as const
+    };
+  }
+
+  if (hasReferenceAttributionException(exceptionTags)) {
+    return {
+      message: 'The payment cannot be attributed automatically from the on-chain reference alone.',
+      recommendation: 'Ask the payer for the confirmed tx hash, then submit it in Manual transfer fallback below or verify it manually.',
+      actionLabel: 'Go to manual tx hash submit' as const,
+      actionType: 'manual' as const
+    };
+  }
+
+  if (invoiceStatus === 'PARTIALLY_PAID') {
+    return {
+      message: 'The invoice has received funds, but the paid amount is still below the expected amount.',
+      recommendation: 'Wait for the remaining transfer or confirm the short payment manually before closing the invoice.',
+      actionLabel: null,
+      actionType: null
+    };
+  }
+
+  if (invoiceStatus === 'OVERPAID') {
+    return {
+      message: 'The invoice has been paid above the expected amount.',
+      recommendation: 'Record the overpayment manually and keep the payment proof for follow-up.',
+      actionLabel: null,
+      actionType: null
+    };
+  }
+
+  if (invoiceStatus === 'EXPIRED' || exceptionTags.includes('LATE_PAYMENT')) {
+    return {
+      message: 'A payment arrived after the invoice expired, so the invoice remains in an exception path.',
+      recommendation: 'Handle it as a late payment case and keep the on-chain proof for audit or customer follow-up.',
+      actionLabel: null,
+      actionType: null
+    };
+  }
+
+  return {
+    message: 'This invoice still needs merchant attention before the payment flow is considered settled.',
+    recommendation: 'Review the latest payment status, payment proof, and tx details before taking the next manual action.',
+    actionLabel: null,
+    actionType: null
+  };
+}
 
 interface InvoiceFormValues {
   customerName: string;
@@ -313,6 +383,129 @@ function PaymentStatusCard({
   );
 }
 
+function ExceptionHandlingCard({
+  invoice,
+  paymentStatus,
+  reconcileResult,
+  reconcileLoading,
+  onRetryReconciliation
+}: {
+  invoice: InvoiceDetail;
+  paymentStatus: InvoicePaymentStatus | null;
+  reconcileResult: ReconcileInvoiceResult | null;
+  reconcileLoading: boolean;
+  onRetryReconciliation: () => void;
+}) {
+  const exceptionTags = paymentStatus?.exceptionTags ?? [];
+  const shouldShow = exceptionTags.length > 0 || EXCEPTION_INVOICE_STATUSES.has(invoice.status);
+
+  if (!shouldShow) {
+    return null;
+  }
+
+  const handlingMeta = getExceptionHandlingMeta(invoice.status, exceptionTags);
+
+  return (
+    <Card
+      className="glass-card payment-exception-card"
+      title="Exception handling"
+      extra={reconcileLoading ? <Spin size="small" /> : <InvoiceStatusTag status={invoice.status} />}
+    >
+      <Alert
+        type="warning"
+        showIcon
+        message={handlingMeta.message}
+        description={handlingMeta.recommendation}
+        style={{ marginBottom: 16 }}
+      />
+
+      <Descriptions column={1} size="small" labelStyle={{ width: 168 }}>
+        <Descriptions.Item label="Current exception tags">
+          {exceptionTags.length > 0 ? (
+            <Space wrap>
+              {exceptionTags.map((tag) => (
+                <Tag key={tag} color="warning">
+                  {formatExceptionTagLabel(tag)}
+                </Tag>
+              ))}
+            </Space>
+          ) : (
+            '-'
+          )}
+        </Descriptions.Item>
+        <Descriptions.Item label="Recommended action">
+          {handlingMeta.recommendation}
+        </Descriptions.Item>
+        <Descriptions.Item label="Latest verification">
+          {paymentStatus?.latestVerificationResult || '-'}
+        </Descriptions.Item>
+        <Descriptions.Item label="Latest tx status">
+          {paymentStatus?.latestPaymentStatus || '-'}
+        </Descriptions.Item>
+        <Descriptions.Item label="Latest tx hash">
+          {paymentStatus?.latestTxHash ? (
+            <Typography.Text copyable={{ text: paymentStatus.latestTxHash }}>
+              {paymentStatus.latestTxHash}
+            </Typography.Text>
+          ) : (
+            '-'
+          )}
+        </Descriptions.Item>
+        <Descriptions.Item label="Last processed">
+          {formatDateTime(paymentStatus?.lastProcessedAt)}
+        </Descriptions.Item>
+      </Descriptions>
+
+      <Space wrap style={{ marginTop: 16 }}>
+        {handlingMeta.actionType === 'reconcile' ? (
+          <Button type="primary" loading={reconcileLoading} onClick={onRetryReconciliation}>
+            {handlingMeta.actionLabel}
+          </Button>
+        ) : null}
+        {handlingMeta.actionType === 'manual' ? (
+          <Button
+            onClick={() => {
+              document.getElementById(MANUAL_TRANSFER_FALLBACK_ID)?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+              });
+            }}
+          >
+            {handlingMeta.actionLabel}
+          </Button>
+        ) : null}
+      </Space>
+
+      {reconcileResult ? (
+        <Alert
+          className="manual-submit-result"
+          type={reconcileResult.reconciledCount > 0 ? 'success' : 'info'}
+          showIcon
+          message={
+            reconcileResult.reconciledCount > 0
+              ? 'Reconciliation retry finished.'
+              : 'No pending transactions were available to reconcile.'
+          }
+          description={(
+            <Descriptions column={1} size="small" labelStyle={{ width: 156 }} style={{ marginTop: 12 }}>
+              <Descriptions.Item label="Reconciled count">
+                {reconcileResult.reconciledCount}
+              </Descriptions.Item>
+              <Descriptions.Item label="Invoice status">
+                <InvoiceStatusTag status={reconcileResult.paymentStatus.status} />
+              </Descriptions.Item>
+              <Descriptions.Item label="Latest tx hash">
+                {reconcileResult.paymentStatus.latestTxHash || '-'}
+              </Descriptions.Item>
+            </Descriptions>
+          )}
+          style={{ marginTop: 16 }}
+        />
+      ) : null}
+    </Card>
+  );
+}
+
 function PaymentProofCard({
   paymentProof,
   loading,
@@ -462,6 +655,7 @@ function ManualPaymentFallbackCard({
 
   return (
     <Card
+      id={MANUAL_TRANSFER_FALLBACK_ID}
       className="glass-card payment-manual-card"
       title="Manual transfer fallback"
       extra={<InvoiceStatusTag status={invoice.status} />}
@@ -652,6 +846,7 @@ export function InvoicesPage() {
   const [pageSize, setPageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [manualSubmitResult, setManualSubmitResult] = useState<ManualSubmitPaymentResult | null>(null);
+  const [reconcileResult, setReconcileResult] = useState<ReconcileInvoiceResult | null>(null);
   const runtimeConfigQuery = useQuery({
     queryKey: ['system-runtime-config'],
     queryFn: getSystemRuntimeConfig,
@@ -766,11 +961,31 @@ export function InvoicesPage() {
     mutationFn: (requestBody: { invoiceId: number; txHash: string }) => manualSubmitInvoicePayment(requestBody),
     onSuccess: (result) => {
       setManualSubmitResult(result);
+      setReconcileResult(null);
       queryClient.invalidateQueries({ queryKey: ['invoice-detail', result.invoiceId] });
       queryClient.invalidateQueries({ queryKey: ['invoice-list'] });
       queryClient.invalidateQueries({ queryKey: ['invoice-payment-status', result.invoiceId] });
       queryClient.invalidateQueries({ queryKey: ['invoice-payment-proof', result.invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-exception-invoices'] });
       message.success('Transaction hash submitted');
+    }
+  });
+
+  const reconcileMutation = useMutation({
+    mutationFn: reconcileInvoice,
+    onSuccess: (result) => {
+      setReconcileResult(result);
+      setManualSubmitResult(null);
+      queryClient.invalidateQueries({ queryKey: ['invoice-detail', result.invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-list'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-payment-status', result.invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-payment-proof', result.invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-exception-invoices'] });
+      message.success(
+        result.reconciledCount > 0
+          ? `Reconciliation retried. ${result.reconciledCount} transaction(s) processed.`
+          : 'No pending transactions to reconcile.'
+      );
     }
   });
 
@@ -790,7 +1005,8 @@ export function InvoicesPage() {
       createMutation.error,
       activateMutation.error,
       cancelMutation.error,
-      manualSubmitMutation.error
+      manualSubmitMutation.error,
+      reconcileMutation.error
     ];
     const unauthorized = errors.find((error) => error instanceof ApiError && error.status === 401);
     if (unauthorized instanceof ApiError) {
@@ -810,11 +1026,13 @@ export function InvoicesPage() {
     paymentInfoQuery.error,
     paymentProofQuery.error,
     paymentStatusQuery.error,
-    manualSubmitMutation.error
+    manualSubmitMutation.error,
+    reconcileMutation.error
   ]);
 
   useEffect(() => {
     setManualSubmitResult(null);
+    setReconcileResult(null);
   }, [selectedInvoiceId]);
 
   useEffect(() => {
@@ -1097,6 +1315,19 @@ export function InvoicesPage() {
                   }}
                   activateLoading={activateMutation.isPending}
                 />
+                <ExceptionHandlingCard
+                  invoice={selectedInvoice}
+                  paymentStatus={paymentStatusQuery.data ?? null}
+                  reconcileResult={reconcileResult}
+                  reconcileLoading={reconcileMutation.isPending}
+                  onRetryReconciliation={() => {
+                    if (!selectedInvoiceId) {
+                      return;
+                    }
+                    setReconcileResult(null);
+                    reconcileMutation.mutate(selectedInvoiceId);
+                  }}
+                />
                 <ManualPaymentFallbackCard
                   invoice={selectedInvoice}
                   paymentInfo={paymentInfoQuery.data ?? selectedInvoice.paymentInfo ?? null}
@@ -1106,6 +1337,8 @@ export function InvoicesPage() {
                     if (!selectedInvoiceId) {
                       return;
                     }
+                    setManualSubmitResult(null);
+                    setReconcileResult(null);
                     manualSubmitMutation.mutate({ invoiceId: selectedInvoiceId, txHash });
                   }}
                 />
@@ -1232,6 +1465,12 @@ export function InvoicesPage() {
       {manualSubmitMutation.error instanceof ApiError && manualSubmitMutation.error.status !== 401 ? (
         <Card className="error-card">
           <Typography.Text type="danger">{manualSubmitMutation.error.message}</Typography.Text>
+        </Card>
+      ) : null}
+
+      {reconcileMutation.error instanceof ApiError && reconcileMutation.error.status !== 401 ? (
+        <Card className="error-card">
+          <Typography.Text type="danger">{reconcileMutation.error.message}</Typography.Text>
         </Card>
       ) : null}
     </div>
