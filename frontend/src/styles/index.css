@@ -28,10 +28,41 @@ body {
   min-height: 100vh;
 }
 
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-main {
+  min-height: 100vh;
+}
+
+.site-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  padding: 10px 16px 14px;
+  background: linear-gradient(180deg, rgba(238, 244, 246, 0), rgba(238, 244, 246, 0.92) 36%);
+}
+
+.site-footer-link {
+  color: rgba(88, 113, 130, 0.88);
+  font-size: 12px;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.site-footer-link:hover {
+  color: var(--accent);
+}
+
 .auth-shell,
 .dashboard-shell {
   min-height: 100vh;
-  padding: 32px;
+  padding: 32px 32px 72px;
 }
 
 .auth-grid {
@@ -251,7 +282,7 @@ body {
 .public-payment-shell {
   position: relative;
   min-height: 100vh;
-  padding: 32px;
+  padding: 32px 32px 72px;
   overflow: hidden;
 }
 
@@ -307,7 +338,7 @@ body {
 @media (max-width: 768px) {
   .auth-shell,
   .dashboard-shell {
-    padding: 20px;
+    padding: 20px 20px 68px;
   }
 
   .dashboard-hero {
@@ -332,7 +363,7 @@ body {
   }
 
   .public-payment-shell {
-    padding: 20px;
+    padding: 20px 20px 68px;
   }
 
   .public-payment-header {
