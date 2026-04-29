@@ -2,113 +2,118 @@
 
 ## 1. 文档目标
 
-本文档用于说明如何把 StableFlow 以前后端分离但同域反向代理的方式部署到一台云服务器上。
+本文档只说明一件事：如何按当前已经验证通过的方式，把 StableFlow 部署到一台云服务器上。
 
-当前推荐方案为：
+当前推荐方案：
 
-- 前端使用 Docker 构建静态产物，并由 Nginx 容器提供访问
-- 前端容器将 `/api` 请求反向代理到后端容器
-- 后端使用 Docker 构建并运行 Spring Boot JAR
-- PostgreSQL 与 Redis 使用外部已部署实例
+- 单机 Docker Compose 部署
+- 前端和后端部署在同一台服务器
+- 前端由 Nginx 容器对外提供访问
+- 后端由 Spring Boot 容器提供 API
+- PostgreSQL 与 Redis 使用外部实例
+- 先跑通 `HTTP + IP/域名`，演示稳定后再考虑 HTTPS
 
-本方案优先服务当前 MVP 和 Demo 演示，目标是：
-
-- 部署路径简单
-- 便于快速上云
-- 不需要修改前端接口地址代码
+这份文档优先服务 Demo、比赛提交和 MVP 快速上线。
 
 ---
 
 ## 2. 当前部署结构
 
-项目根目录已提供以下 Docker 部署文件：
+项目根目录已经提供以下文件：
 
 - `backend/Dockerfile`
+- `deploy.sh`
 - `frontend/Dockerfile`
 - `frontend/nginx.conf`
 - `docker-compose.yml`
 - `.env.example`
 
-运行结构如下：
+整体结构如下：
 
 ```text
 Browser
   -> frontend container (nginx, port 80)
-       -> /            静态前端资源
-       -> /api/*       proxy 到 backend:8080
+       -> /            前端页面
+       -> /api/*       反向代理到 backend:8080
+       -> /swagger-ui* 反向代理到 backend:8080
   -> backend container (spring boot, internal 8080)
        -> PostgreSQL   外部数据库
-       -> Redis        外部缓存 / 分布式锁
-       -> Solana RPC   外部链上访问节点
+       -> Redis        外部缓存
+       -> Solana RPC   外部链上节点
 ```
 
 ---
 
-## 3. 前置条件
+## 3. 部署前需要准备什么
 
-部署前需要准备：
+部署前请先准备好：
 
-- 一台 Linux 云服务器，推荐 Ubuntu 22.04+
-- 服务器已安装 Docker Engine 和 Docker Compose Plugin
-- 一套可访问的 PostgreSQL 实例
-- 一套可访问的 Redis 实例
-- 一个可用的 Solana RPC 地址
+- 一台 Linux 云服务器
+- 已安装 Docker Engine 和 Docker Compose Plugin
+- 一个可访问的 PostgreSQL
+- 一个可访问的 Redis
+- 一个可访问的 Solana RPC
 
-当前方案默认先使用：
+建议至少开放以下端口：
 
-- `HTTP + 服务器 IP` 或 `HTTP + 域名`
+- `22`：SSH
+- `80`：站点访问
 
-建议先跑通 HTTP，再补 HTTPS。
+如果后续接 HTTPS，再开放 `443`。
 
 ---
 
-## 4. 服务器安装 Docker
+## 4. 实际部署步骤
 
-若服务器尚未安装 Docker，可执行：
+### 4.1 服务器目录约定
+
+建议统一放在下面这个目录：
 
 ```bash
-sudo apt update
-sudo apt install -y ca-certificates curl gnupg
-sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
-
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo $VERSION_CODENAME) stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-sudo systemctl enable docker
-sudo systemctl start docker
+/opt/stableflow
 ```
 
-验证：
+目录里应包含：
+
+- 项目代码
+- `deploy.sh`
+- `docker-compose.yml`
+- `.env`
+
+也就是说，推荐直接把当前仓库整体放到 `/opt/stableflow`。
+
+### 4.2 上传代码到服务器
+
+建议把项目放到：
 
 ```bash
-docker --version
-docker compose version
+/opt/stableflow
 ```
 
----
+上传代码有两种方式，任选一种：
 
-## 5. 拉取代码
-
-在服务器上拉取项目代码：
+#### 方式 A：服务器直接拉 Git
 
 ```bash
-git clone <your-repo-url>
-cd stableflow
+git clone <your-repo-url> /opt/stableflow
+cd /opt/stableflow
 ```
 
-如果不是通过 Git 直接拉取，也可以把当前仓库压缩后上传到服务器解压。
+#### 方式 B：本地代码直接上传到服务器
 
----
+如果服务器访问 GitHub 不稳定，直接把本地当前代码上传到 `/opt/stableflow` 即可。
 
-## 6. 准备环境变量
+这也是当前已经走通过的方式，更适合 Demo 环境。
 
-将根目录模板复制为真实配置文件：
+上传完成后进入项目目录：
+
+```bash
+cd /opt/stableflow
+```
+
+### 4.3 配置环境变量
+
+先复制模板：
 
 ```bash
 cp .env.example .env
@@ -120,13 +125,14 @@ cp .env.example .env
 nano .env
 ```
 
-至少需要修改以下字段：
+至少确认以下字段：
 
 ```env
 FRONTEND_PORT=80
 PUBLIC_BASE_URL=http://your-server-ip-or-domain
 CORS_ALLOWED_ORIGINS=http://your-server-ip-or-domain
 
+SPRING_PROFILES_ACTIVE=prod
 JWT_SECRET=replace-with-a-long-random-secret
 
 DB_URL=jdbc:postgresql://your-postgres-host:5432/stableflow
@@ -142,45 +148,68 @@ SOLANA_RPC_URL=https://your-rpc-url
 SOLANA_USDC_MINT=
 ```
 
-说明：
+字段含义可以这样理解：
 
-- `PUBLIC_BASE_URL`
-  - 对外访问地址，用于支付页与链接生成
-- `CORS_ALLOWED_ORIGINS`
-  - 当前允许访问后端的前端来源地址
-- `JWT_SECRET`
-  - 必须替换为足够长的随机字符串
-- `DB_URL`
-  - 指向外部 PostgreSQL
-- `REDIS_HOST`
-  - 指向外部 Redis
-- `SOLANA_NETWORK`
-  - `DEVNET` 或 `MAINNET`
-- `SOLANA_USDC_MINT`
-  - 可留空，后端会按网络默认值解析
+- `PUBLIC_BASE_URL`：系统对外访问地址，会用于公共支付页链接生成
+- `CORS_ALLOWED_ORIGINS`：允许访问后端的前端来源地址
+- `JWT_SECRET`：登录鉴权密钥，必须替换成真实随机字符串
+- `DB_URL / DB_USERNAME / DB_PASSWORD`：PostgreSQL 连接信息
+- `REDIS_HOST / REDIS_PORT / REDIS_PASSWORD`：Redis 连接信息
+- `SOLANA_NETWORK`：使用 `DEVNET` 或 `MAINNET`
+- `SOLANA_RPC_URL`：建议显式填写可用 RPC 地址
+- `SOLANA_USDC_MINT`：可以留空，后端会按网络使用默认值
 
-若切换主网，建议至少修改：
+如果使用主网，至少改成：
 
 ```env
 SOLANA_NETWORK=MAINNET
 SOLANA_RPC_URL=https://your-mainnet-rpc
 ```
 
----
+### 4.4 给脚本执行权限
 
-## 7. 启动服务
+第一次部署时执行：
 
-在项目根目录执行：
+```bash
+cd /opt/stableflow
+chmod +x deploy.sh
+```
+
+### 4.5 一键启动服务
+
+在项目根目录直接执行：
+
+```bash
+cd /opt/stableflow
+./deploy.sh
+```
+
+当前脚本内容非常简单，本质上就是执行：
+
+- `docker compose up -d --build`
+- `docker compose ps`
+
+如果你不想用脚本，也可以手动执行：
 
 ```bash
 docker compose up -d --build
 ```
 
-说明：
+---
 
-- `backend` 容器会在启动时构建 Spring Boot JAR
-- `frontend` 容器会构建前端静态资源，并由 Nginx 提供服务
-- 前端请求 `/api/*` 时会自动转发到 `backend:8080`
+## 5. 最简部署方式
+
+如果你只想记住最短流程，可以直接按下面做：
+
+```bash
+mkdir -p /opt/stableflow
+# 把项目代码上传到 /opt/stableflow
+cd /opt/stableflow
+cp .env.example .env
+nano .env
+chmod +x deploy.sh
+./deploy.sh
+```
 
 查看容器状态：
 
@@ -197,55 +226,64 @@ docker compose logs -f frontend
 
 ---
 
-## 8. 访问与验证
+## 6. 部署完成后怎么验证
 
-部署成功后，默认访问地址如下：
+默认访问地址：
 
-- 前端首页：
+- 首页：`http://your-server-ip-or-domain`
+- Swagger：`http://your-server-ip-or-domain/swagger-ui.html`
 
-```text
-http://your-server-ip-or-domain
-```
-
-- Swagger UI：
-
-```text
-http://your-server-ip-or-domain/swagger-ui.html
-```
-
-建议按以下顺序验证：
+建议按下面顺序检查：
 
 1. 打开首页，确认前端能正常加载
 2. 打开 `swagger-ui.html`，确认后端已启动
-3. 完成注册或登录
-4. 进入收款配置页，确认能正常保存
-5. 创建一张发票，确认支付页与支付信息可用
-6. 观察后端日志，确认扫描任务、验证任务与核销任务正常运行
+3. 注册或登录一个账号
+4. 进入收款配置页，保存固定收款地址
+5. 创建一张发票
+6. 激活发票
+7. 打开公共支付页，确认支付信息和二维码可见
+8. 查看仪表盘和账单列表
+
+如果这 8 步都能走通，说明当前 Demo 环境已经基本可用。
 
 ---
 
-## 9. 防火墙与端口
+## 7. 后续更新代码怎么做
 
-默认对外只需要放开：
-
-- `80`：前端与 API 入口
-- `22`：SSH 登录
-
-如果后续接 HTTPS，还需要放开：
-
-- `443`
-
-若使用 `ufw`：
+### 方式 A：服务器目录本身就是 Git 工作目录
 
 ```bash
-sudo ufw allow 22
-sudo ufw allow 80
-sudo ufw allow 443
+cd /opt/stableflow
+git pull
+./deploy.sh
 ```
+
+### 方式 B：服务器使用上传后的代码目录
+
+把本地改动过的文件重新上传到服务器后执行：
+
+```bash
+cd /opt/stableflow
+./deploy.sh
+```
+
+如果只改了 `.env`，通常可以直接执行：
+
+```bash
+./deploy.sh
+```
+
+对于当前项目的 Demo 场景，方式 B 更直接，也更稳。
 
 ---
 
-## 10. 常用运维命令
+## 8. 常用命令
+
+一键部署：
+
+```bash
+./deploy.sh
+```
 
 重新构建并启动：
 
@@ -259,63 +297,45 @@ docker compose up -d --build
 docker compose down
 ```
 
-只看后端日志：
-
-```bash
-docker compose logs -f backend
-```
-
-只看前端日志：
-
-```bash
-docker compose logs -f frontend
-```
-
 查看容器状态：
 
 ```bash
 docker compose ps
 ```
 
----
-
-## 11. 版本更新流程
-
-当代码更新后，建议按以下步骤升级：
+查看后端日志：
 
 ```bash
-git pull
-docker compose up -d --build
+docker compose logs -f backend
 ```
 
-若只改了环境变量：
+查看前端日志：
 
 ```bash
-docker compose up -d
+docker compose logs -f frontend
 ```
 
 ---
 
-## 12. 常见问题排查
+## 9. 常见问题
 
-### 12.1 前端能打开，但登录失败
+### 9.1 首页能打开，但登录失败
 
 优先检查：
 
-- 后端容器是否正常启动
-- `.env` 中 `JWT_SECRET` 是否已配置
-- 浏览器访问 `/api/auth/login` 是否返回 200 / 401 / 500
+- `backend` 容器是否正常启动
+- `.env` 中 `JWT_SECRET` 是否已正确配置
 - `docker compose logs -f backend`
 
-### 12.2 页面打开正常，但接口请求失败
+### 9.2 页面能打开，但接口请求失败
 
 优先检查：
 
-- `frontend/nginx.conf` 是否已正确反代 `/api`
-- 后端容器是否仍在运行
+- `frontend/nginx.conf` 是否正确代理 `/api/`
+- `backend` 容器是否仍在运行
 - `docker compose ps`
 
-### 12.3 后端启动失败
+### 9.3 后端启动失败
 
 优先检查：
 
@@ -324,37 +344,39 @@ docker compose up -d
 - `DB_URL / DB_USERNAME / DB_PASSWORD` 是否正确
 - `REDIS_HOST / REDIS_PORT / REDIS_PASSWORD` 是否正确
 
-### 12.4 链上扫描没有结果
+### 9.4 链上接口超时或扫链无结果
 
 优先检查：
 
-- `SOLANA_NETWORK` 是否与当前测试环境一致
+- `SOLANA_NETWORK` 是否和当前测试环境一致
 - `SOLANA_RPC_URL` 是否可用
-- 后端日志中是否有 RPC timeout
-- 收款配置中的钱包地址与当前网络是否匹配
+- 后端日志里是否有 RPC timeout
 
-### 12.5 Swagger 打不开
+如果服务器无法直连 Solana RPC，可以在宿主机上配置代理，再让后端容器通过代理访问外部 RPC。
+
+### 9.5 Swagger 打不开
 
 优先检查：
 
 - `backend` 容器是否正常启动
-- `frontend/nginx.conf` 是否包含 `/swagger-ui.html`、`/swagger-ui/`、`/v3/api-docs` 反代配置
+- `frontend/nginx.conf` 是否包含 `/swagger-ui.html`、`/swagger-ui/`、`/v3/api-docs` 的反向代理配置
 
 ---
 
-## 13. 当前部署边界
+## 10. 当前文档覆盖范围
 
-当前部署文档只覆盖：
+本文档当前只覆盖：
 
 - 单机 Docker Compose 部署
 - 前后端同机部署
 - PostgreSQL 与 Redis 使用外部实例
+- 适合 Demo / 比赛 / MVP 环境
 
-当前不覆盖：
+本文档当前不覆盖：
 
 - Kubernetes
 - 多实例水平扩容
-- HTTPS / Let's Encrypt 自动化
-- CI/CD 自动发布
+- 自动化 CI/CD 发布
+- HTTPS 自动签发
 
-建议先按本方案把 Demo 环境跑通，再逐步补后续能力。
+建议先按本文档把可演示环境跑通，再逐步补后续能力。
