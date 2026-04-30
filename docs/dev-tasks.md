@@ -159,7 +159,7 @@
 
 ### T103 固定地址所有权验证扩展位
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0.5
 - 依赖：T102
@@ -472,7 +472,7 @@
 
 ### T601 Outbox 事件分发
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0.5
 - 依赖：T403
@@ -486,7 +486,7 @@
 
 ### T602 关键日志与指标
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0.5
 - 依赖：T303
@@ -505,7 +505,7 @@
 
 ### T701 异常账单页
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P1
 - 依赖：T403
@@ -724,6 +724,58 @@
   - Agent 可基于已验证数据输出对账总结
   - 结果与 Dashboard 统计口径一致
 
+#### T814 商家钱包所有权真实验签
+
+- 状态：`TODO`
+
+- 优先级：P1
+- 依赖：T103
+- 任务说明：当前商家钱包所有权验证已具备 challenge、签名提交、状态流转和前端交互，但后端验签器仍为占位实现；后续需要接入真实 Solana 钱包签名验签
+- 交付物：
+  - `MerchantWalletOwnershipVerifierServiceImpl` 接入真实验签
+  - 基于 `walletAddress + challengeMessage + signature` 的校验逻辑
+  - 验签成功/失败状态流转与测试
+- 完成标准：
+  - 验签成功后写入 `VERIFIED` 与 `ownershipVerifiedAt`
+  - 验签失败后写入 `FAILED`
+  - `verifierReady` 返回真实能力状态
+  - 不改变当前 `fixed address + reference` 的支付主归因模型
+
+#### T815 手动转账兜底与 txHash 提交认领
+
+- 状态：`DONE`
+
+- 优先级：P0.5
+- 依赖：T404, T503
+- 任务说明：当前扫码支付主流程已跑通，但不同钱包对 `solana:` payment link 与 Solana Pay 参数支持不一致；需要补一个不依赖扫码的手动转账兜底路径，允许付款方提交 `txHash`，由系统拉链上交易并尝试自动归账或进入人工处理
+- 交付物：
+  - `POST /api/invoices/payment/manual-submit`
+  - 支付页 `Manual transfer fallback` 区块
+  - 手动提交结果模型与说明文案
+- 完成标准：
+  - 用户可在支付页查看收款地址、金额、mint、reference，并手动完成转账
+  - 用户提交 `txHash` 后，后端可拉取链上交易并校验 `recipient`、`mint`、`amount`、`reference`
+  - 若交易满足自动归因条件，则继续复用现有 verification 与 reconciliation 流程
+  - 若交易有效但缺少可用 `reference`，则进入 `MANUAL_REVIEW_REQUIRED` 等人工处理状态，而不是丢单
+  - 不改变当前 `fixed address + reference` 作为主归因模型，只补充兼容性兜底路径
+
+#### T816 异常单处理闭环
+
+- 状态：`DONE`
+
+- 优先级：P0.5
+- 依赖：T701, T815
+- 任务说明：让异常单从“能查看”升级到“可处理”，在账单详情页集中提供异常说明、推荐动作和已有兜底入口，帮助商家把异常支付真正收口
+- 交付物：
+  - 账单详情页 `Exception handling` 区块
+  - 手动重试核销入口
+  - 异常说明与推荐处理文案
+- 完成标准：
+  - 商家可从异常列表进入详情页查看异常原因与推荐动作
+  - `FAILED_RECONCILIATION` 可直接触发手动重试核销
+  - 缺少 reference / reference 无法归因时可明确引导到手动 `txHash` 提交区块
+  - 处理动作执行后，页面能展示最新反馈和账单状态
+
 ### 15.2 工程基础补充
 
 #### T811 SpringDoc / Swagger UI 接入
@@ -773,7 +825,7 @@
 
 #### T901 前端登录页
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0
 - 依赖：T101
@@ -788,7 +840,7 @@
 
 #### T902 前端收款地址配置页
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0
 - 依赖：T102, T901
@@ -801,7 +853,7 @@
 
 #### T903 前端 Invoice 列表与创建页
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0
 - 依赖：T201, T202, T901
@@ -815,7 +867,7 @@
 
 #### T904 前端 Invoice 详情与支付信息页
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0
 - 依赖：T204, T903
@@ -830,7 +882,7 @@
 
 #### T905 前端公共支付页
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0
 - 依赖：T502
@@ -845,7 +897,7 @@
 
 #### T906 前端 Dashboard 汇总页
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0
 - 依赖：T501, T901
@@ -858,7 +910,7 @@
 
 #### T907 前端 Payment Proof 展示
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0
 - 依赖：T404, T904
@@ -871,7 +923,7 @@
 
 #### T908 前端异常账单页
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P1
 - 依赖：T701, T901
@@ -996,21 +1048,21 @@
 
 #### T1007 Invoice 取消/作废
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0.5
 - 依赖：T201
 - 任务说明：商家创建错误账单后无法取消，`InvoiceStatusEnum` 无 `CANCELLED` 状态
 - 交付物：
   - `InvoiceStatusEnum` 新增 `CANCELLED`
-  - `POST /api/invoices/{id}/cancel`
+  - `POST /api/invoices/cancel`
 - 完成标准：
   - 仅 `DRAFT` 或 `PENDING` 状态可取消
-  - 已取消账单不会被扫描和核销
+  - 已取消账单不会暴露支付信息，也不会进入验证和核销归账流程
 
 #### T1008 Invoice 状态流转集中校验
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0.5
 - 依赖：T201
@@ -1026,7 +1078,7 @@
 
 #### T1009 输入校验补全
 
-- 状态：`TODO`
+- 状态：`DONE`
 
 - 优先级：P0.5
 - 依赖：T201

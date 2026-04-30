@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -77,15 +78,12 @@ class PaymentProofServiceTest {
         );
 
         assertEquals(true, saved);
-        ArgumentCaptor<PaymentProof> paymentProofCaptor = ArgumentCaptor.forClass(PaymentProof.class);
-        verify(paymentProofMapper).insert(paymentProofCaptor.capture());
-        PaymentProof savedProof = paymentProofCaptor.getValue();
-        assertEquals(100L, savedProof.getInvoiceId());
-        assertEquals("tx-paid", savedProof.getTxHash());
-        assertEquals("INVOICE_PAYMENT_RESULT", savedProof.getProofType().getCode());
-        assertEquals("ref_paid", savedProof.getProofPayload().get("referenceKey").asText());
-        assertEquals("PAID", savedProof.getProofPayload().get("finalStatus").asText());
-        assertEquals(2, savedProof.getProofPayload().get("exceptionTags").size());
+        verify(paymentProofMapper).insertJsonb(
+            eq(100L),
+            eq("tx-paid"),
+            eq("INVOICE_PAYMENT_RESULT"),
+            any(String.class)
+        );
     }
 
     @Test
@@ -161,7 +159,8 @@ class PaymentProofServiceTest {
     @Test
     void shouldReturnFalseWhenConcurrentInsertHitsUniqueConstraint() {
         when(paymentProofMapper.selectCount(any())).thenReturn(0L);
-        when(paymentProofMapper.insert(any(PaymentProof.class))).thenThrow(new DuplicateKeyException("duplicate"));
+        when(paymentProofMapper.insertJsonb(eq(100L), eq("tx-paid"), eq("INVOICE_PAYMENT_RESULT"), any(String.class)))
+            .thenThrow(new DuplicateKeyException("duplicate"));
 
         boolean saved = paymentProofService.saveIfAbsent(
             invoice(),

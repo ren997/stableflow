@@ -117,14 +117,27 @@ class PaymentVerificationServiceTest {
     }
 
     @Test
-    void shouldKeepTransactionPendingWhenInvoiceIsDraft() {
+    void shouldTreatDraftInvoiceAsInvalidReferenceForVerification() {
         PaymentTransaction paymentTransaction = transaction(31L, "tx-31", "ref-draft", "10.00", "usdc-mint", utc("2026-03-17T10:00:00Z"));
         when(invoicePaymentRequestMapper.selectOne(any())).thenReturn(paymentRequest(131L, "ref-draft", "usdc-mint", "10.00", utc("2026-03-18T10:00:00Z")));
         when(invoiceService.getById(131L)).thenReturn(invoice(131L, InvoiceStatusEnum.DRAFT));
 
         PaymentVerificationResultVo result = singlePaymentVerificationService.verifyTransaction(paymentTransaction);
 
-        assertEquals(PaymentVerificationResultEnum.PENDING, result.verificationResult());
+        assertEquals(PaymentVerificationResultEnum.INVALID_REFERENCE, result.verificationResult());
+        assertEquals(PaymentTransactionStatusEnum.UNMATCHED, result.paymentStatus());
+        assertEquals(null, result.invoiceId());
+    }
+
+    @Test
+    void shouldTreatCancelledInvoiceAsInvalidReferenceForVerification() {
+        PaymentTransaction paymentTransaction = transaction(32L, "tx-32", "ref-cancelled", "10.00", "usdc-mint", utc("2026-03-17T10:00:00Z"));
+        when(invoicePaymentRequestMapper.selectOne(any())).thenReturn(paymentRequest(132L, "ref-cancelled", "usdc-mint", "10.00", utc("2026-03-18T10:00:00Z")));
+        when(invoiceService.getById(132L)).thenReturn(invoice(132L, InvoiceStatusEnum.CANCELLED));
+
+        PaymentVerificationResultVo result = singlePaymentVerificationService.verifyTransaction(paymentTransaction);
+
+        assertEquals(PaymentVerificationResultEnum.INVALID_REFERENCE, result.verificationResult());
         assertEquals(PaymentTransactionStatusEnum.UNMATCHED, result.paymentStatus());
         assertEquals(null, result.invoiceId());
     }

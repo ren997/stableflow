@@ -13,6 +13,7 @@ import { clearSession, getMerchantSession } from '../../services/session';
 const statusMeta: Record<string, { label: string; color: string }> = {
   DRAFT: { label: 'Draft', color: 'default' },
   PENDING: { label: 'Pending', color: 'processing' },
+  CANCELLED: { label: 'Cancelled', color: 'default' },
   PAID: { label: 'Paid', color: 'success' },
   PARTIALLY_PAID: { label: 'Partial', color: 'gold' },
   OVERPAID: { label: 'Overpaid', color: 'volcano' },
@@ -94,6 +95,12 @@ export function DashboardPage() {
           </Typography.Paragraph>
         </div>
         <Space wrap>
+          <Button onClick={() => navigate('/invoices/exceptions')}>
+            Exception queue
+          </Button>
+          <Button type="primary" ghost onClick={() => navigate('/invoices')}>
+            Invoices
+          </Button>
           <Button type="primary" onClick={() => navigate('/settings/payment-config')}>
             Payment config
           </Button>
@@ -118,7 +125,13 @@ export function DashboardPage() {
           </Card>
         </Col>
         <Col xs={12} lg={6}>
-          <Card>
+          <Card
+            extra={(
+              <Button type="link" size="small" onClick={() => navigate('/invoices/exceptions')}>
+                Open
+              </Button>
+            )}
+          >
             <Statistic title="Exceptions" value={summary?.exceptionCount ?? 0} />
           </Card>
         </Col>

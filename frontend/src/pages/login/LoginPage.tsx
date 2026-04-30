@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Button, Card, Col, Form, Input, Row, Space, Typography, message } from 'antd';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { login, type LoginRequest } from '../../services/auth';
-import { getAccessToken, setAuthenticatedMerchantSession } from '../../services/session';
+import { setAuthenticatedMerchantSession } from '../../services/session';
 
 const loginBullets = ['Fixed address billing', 'Reference-based reconciliation', 'Dashboard-ready workflow'];
 
@@ -19,12 +18,6 @@ export function LoginPage() {
       navigate('/dashboard', { replace: true });
     }
   });
-
-  useEffect(() => {
-    if (getAccessToken()) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [navigate]);
 
   const from = (location.state as { from?: string } | null)?.from;
 

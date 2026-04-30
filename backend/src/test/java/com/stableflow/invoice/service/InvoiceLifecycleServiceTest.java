@@ -4,8 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -77,8 +79,6 @@ class InvoiceLifecycleServiceTest {
         CreateInvoiceRequestDto request = new CreateInvoiceRequestDto(
             "Alice",
             new BigDecimal("99.00"),
-            "USDC",
-            "SOLANA",
             "Monthly fee",
             utc("2026-03-25T10:00:00Z")
         );
@@ -97,6 +97,37 @@ class InvoiceLifecycleServiceTest {
         assertNull(response.paymentInfo());
         verify(invoiceMapper).insert(any(Invoice.class));
         verify(invoicePaymentRequestMapper).insert(any(InvoicePaymentRequest.class));
+    }
+
+    @Test
+    void shouldGenerateSolanaCompatibleReferenceKeyWhenCreatingInvoice() {
+        MerchantPaymentConfig paymentConfig = paymentConfig();
+        CreateInvoiceRequestDto request = new CreateInvoiceRequestDto(
+            "Alice",
+            new BigDecimal("99.00"),
+            "Monthly fee",
+            utc("2026-03-25T10:00:00Z")
+        );
+
+        when(currentMerchantProvider.requireCurrentMerchantId()).thenReturn(10L);
+        when(merchantPaymentConfigService.getRequiredConfig(10L)).thenReturn(paymentConfig);
+        doAnswer(invocation -> {
+            Invoice invoice = invocation.getArgument(0);
+            invoice.setId(309L);
+            return 1;
+        }).when(invoiceMapper).insert(any(Invoice.class));
+
+        final InvoicePaymentRequest[] insertedPaymentRequest = new InvoicePaymentRequest[1];
+        doAnswer(invocation -> {
+            insertedPaymentRequest[0] = invocation.getArgument(0);
+            return 1;
+        }).when(invoicePaymentRequestMapper).insert(any(InvoicePaymentRequest.class));
+
+        invoiceService.createInvoice(request);
+
+        assertNotNull(insertedPaymentRequest[0]);
+        assertTrue(insertedPaymentRequest[0].getReferenceKey().matches("^[1-9A-HJ-NP-Za-km-z]{32,44}$"));
+        assertTrue(insertedPaymentRequest[0].getPaymentLink().contains("reference=" + insertedPaymentRequest[0].getReferenceKey()));
     }
 
     @Test
@@ -145,7 +176,7 @@ class InvoiceLifecycleServiceTest {
         BusinessException exception = assertThrows(BusinessException.class, () -> invoiceService.getPaymentInfo(303L));
 
         assertEquals(ErrorCode.INVALID_REQUEST, exception.getErrorCode());
-        assertEquals("Draft invoices do not expose payment info before activation", exception.getMessage());
+        assertEquals("Inactive invoices do not expose payment info before activation or after cancellation", exception.getMessage());
     }
 
     @Test
@@ -157,7 +188,7 @@ class InvoiceLifecycleServiceTest {
         BusinessException exception = assertThrows(BusinessException.class, () -> invoiceService.getPublicPaymentPage("pub_304"));
 
         assertEquals(ErrorCode.INVOICE_NOT_FOUND, exception.getErrorCode());
-        assertEquals("Public payment page is not available for draft invoices", exception.getMessage());
+        assertEquals("Public payment page is not available for inactive invoices", exception.getMessage());
     }
 
     @Test
@@ -174,6 +205,53 @@ class InvoiceLifecycleServiceTest {
         assertEquals("pub_305", publicPaymentPage.publicId());
         assertEquals(InvoiceStatusEnum.PENDING, publicPaymentPage.status());
         assertEquals("ref-1", publicPaymentPage.paymentInfo().referenceKey());
+    }
+
+    @Test
+    void shouldCancelPendingInvoiceAndHidePaymentInfo() {
+        Invoice invoice = draftInvoice(306L);
+        invoice.setStatus(InvoiceStatusEnum.PENDING);
+        InvoicePaymentRequest paymentRequest = paymentRequest(306L);
+
+        when(currentMerchantProvider.requireCurrentMerchantId()).thenReturn(10L);
+        when(invoiceMapper.selectById(306L)).thenReturn(invoice);
+        when(invoicePaymentRequestMapper.selectOne(any())).thenReturn(paymentRequest);
+
+        InvoiceDetailVo response = invoiceService.cancelInvoice(306L);
+
+        assertEquals(InvoiceStatusEnum.CANCELLED, invoice.getStatus());
+        assertEquals(InvoiceStatusEnum.CANCELLED, response.status());
+        assertNull(response.paymentInfo());
+        verify(invoiceMapper).updateById(invoice);
+    }
+
+    @Test
+    void shouldRejectCancellationWhenInvoiceAlreadyPaid() {
+        Invoice invoice = draftInvoice(307L);
+        invoice.setStatus(InvoiceStatusEnum.PAID);
+
+        when(currentMerchantProvider.requireCurrentMerchantId()).thenReturn(10L);
+        when(invoiceMapper.selectById(307L)).thenReturn(invoice);
+
+        BusinessException exception = assertThrows(BusinessException.class, () -> invoiceService.cancelInvoice(307L));
+
+        assertEquals(ErrorCode.INVALID_REQUEST, exception.getErrorCode());
+        assertEquals("Only DRAFT or PENDING invoices can be cancelled", exception.getMessage());
+        verify(invoiceMapper, never()).updateById(any(Invoice.class));
+    }
+
+    @Test
+    void shouldRejectCancelledPaymentInfoAccess() {
+        Invoice invoice = draftInvoice(308L);
+        invoice.setStatus(InvoiceStatusEnum.CANCELLED);
+
+        when(currentMerchantProvider.requireCurrentMerchantId()).thenReturn(10L);
+        when(invoiceMapper.selectById(308L)).thenReturn(invoice);
+
+        BusinessException exception = assertThrows(BusinessException.class, () -> invoiceService.getPaymentInfo(308L));
+
+        assertEquals(ErrorCode.INVALID_REQUEST, exception.getErrorCode());
+        assertEquals("Inactive invoices do not expose payment info before activation or after cancellation", exception.getMessage());
     }
 
     private Invoice draftInvoice(Long id) {

@@ -6,6 +6,7 @@ import com.stableflow.blockchain.entity.PaymentTransaction;
 import com.stableflow.invoice.entity.Invoice;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import com.stableflow.invoice.service.InvoiceService;
+import com.stableflow.outbox.service.OutboxEventService;
 import com.stableflow.reconciliation.entity.ReconciliationRecord;
 import com.stableflow.reconciliation.enums.ReconciliationStatusEnum;
 import com.stableflow.system.exception.BusinessException;
@@ -16,6 +17,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,9 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SingleReconciliationServiceImpl implements SingleReconciliationService {
 
+    private static final Logger log = LoggerFactory.getLogger(SingleReconciliationServiceImpl.class);
+
     private final InvoiceService invoiceService;
     private final ReconciliationRecordService reconciliationRecordService;
     private final PaymentProofService paymentProofService;
+    private final OutboxEventService outboxEventService;
     private final ObjectMapper objectMapper;
 
     /** Reconcile one verified transaction into invoice state, reconciliation record, and payment proof / 将一笔已验证交易核销到账单状态、核销记录与支付凭证 */
@@ -52,7 +58,7 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
 
         // 第四步计算账单更新快照，并先落库账单状态，确保后续凭证读取到的是最新业务结果。
         InvoiceSnapshot invoiceSnapshot = buildInvoiceSnapshot(invoice, paymentTransaction, decision);
-        applyInvoiceUpdate(invoice.getId(), invoiceSnapshot);
+        applyInvoiceUpdate(invoice, invoiceSnapshot);
 
         // 第五步沉淀核销记录，保留这笔交易为什么被认账或跳过的处理痕迹。
         ReconciliationRecord reconciliationRecord = toReconciliationRecord(paymentTransaction, decision);
@@ -66,6 +72,27 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
             invoiceSnapshot.status(),
             invoiceSnapshot.exceptionTags(),
             invoiceSnapshot.paidAt()
+        );
+
+        // 第七步写入 outbox 事件，让通知、Webhook、Agent 等后续异步能力都建立在已核销事实之上。
+        outboxEventService.saveInvoicePaymentResultEvent(
+            invoice,
+            paymentTransaction,
+            reconciliationRecord,
+            invoiceSnapshot.status(),
+            invoiceSnapshot.exceptionTags(),
+            invoiceSnapshot.paidAt()
+        );
+
+        log.info(
+            "Reconciliation applied, merchantId={}, invoiceId={}, reference={}, txHash={}, verificationResult={}, reconciliationStatus={}, finalStatus={}",
+            invoice.getMerchantId(),
+            invoice.getId(),
+            paymentTransaction.getReferenceKey(),
+            paymentTransaction.getTxHash(),
+            paymentTransaction.getVerificationResult(),
+            reconciliationRecord.getReconciliationStatus(),
+            invoiceSnapshot.status()
         );
         return true;
     }
@@ -138,10 +165,16 @@ public class SingleReconciliationServiceImpl implements SingleReconciliationServ
         );
     }
 
-    private void applyInvoiceUpdate(Long invoiceId, InvoiceSnapshot invoiceSnapshot) {
+    private void applyInvoiceUpdate(Invoice invoice, InvoiceSnapshot invoiceSnapshot) {
+        try {
+            InvoiceStatusEnum.ensureCanTransition(invoice.getStatus(), invoiceSnapshot.status());
+        } catch (IllegalStateException ex) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, ex.getMessage());
+        }
+
         // 只更新核销需要变动的字段，避免覆盖账单上的无关信息。
         Invoice update = new Invoice();
-        update.setId(invoiceId);
+        update.setId(invoice.getId());
         update.setStatus(invoiceSnapshot.status());
         update.setExceptionTags(invoiceSnapshot.exceptionTags());
         update.setPaidAt(invoiceSnapshot.paidAt());

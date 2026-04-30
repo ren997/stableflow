@@ -23,11 +23,27 @@ public class PaymentVerificationServiceImpl implements PaymentVerificationServic
         // 先取出一批 PENDING 候选交易，再逐笔复用单交易验证规则。
         for (PaymentTransaction paymentTransaction : paymentTransactionService.listPendingVerificationTransactions(limit)) {
             try {
-                singlePaymentVerificationService.verifyTransaction(paymentTransaction);
+                PaymentVerificationResultVo result = singlePaymentVerificationService.verifyTransaction(paymentTransaction);
+                log.info(
+                    "Payment verification finished, paymentTransactionId={}, invoiceId={}, reference={}, txHash={}, verificationResult={}, paymentStatus={}",
+                    result.paymentTransactionId(),
+                    result.invoiceId(),
+                    result.referenceKey(),
+                    result.txHash(),
+                    result.verificationResult(),
+                    result.paymentStatus()
+                );
                 processedCount++;
             } catch (RuntimeException ex) {
                 // 单笔失败只记录日志，不阻断同批其它交易，避免任务吞掉后续可处理数据。
-                log.error("Failed to verify paymentTransactionId={}, txHash={}", paymentTransaction.getId(), paymentTransaction.getTxHash(), ex);
+                log.error(
+                    "Failed to verify paymentTransactionId={}, invoiceId={}, reference={}, txHash={}",
+                    paymentTransaction.getId(),
+                    paymentTransaction.getInvoiceId(),
+                    paymentTransaction.getReferenceKey(),
+                    paymentTransaction.getTxHash(),
+                    ex
+                );
             }
         }
         return processedCount;

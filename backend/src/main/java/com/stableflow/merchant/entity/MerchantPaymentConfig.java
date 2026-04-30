@@ -3,6 +3,7 @@ package com.stableflow.merchant.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.stableflow.merchant.enums.MerchantWalletOwnershipStatusEnum;
 import java.time.OffsetDateTime;
 import lombok.Data;
 
@@ -29,6 +30,27 @@ public class MerchantPaymentConfig {
 
     /** Whether this config is active / 当前配置是否启用 */
     private Boolean activeFlag;
+
+    /** Current wallet ownership verification status / 当前钱包地址所有权验证状态 */
+    private MerchantWalletOwnershipStatusEnum ownershipVerificationStatus;
+
+    /** Latest wallet ownership challenge code / 最近一次钱包地址所有权挑战码 */
+    private String ownershipChallengeCode;
+
+    /** Latest wallet ownership challenge message / 最近一次钱包地址所有权挑战消息 */
+    private String ownershipChallengeMessage;
+
+    /** Latest wallet ownership challenge expiry time in UTC / 最近一次钱包地址所有权挑战过期时间（UTC） */
+    private OffsetDateTime ownershipChallengeExpiresAt;
+
+    /** Latest submitted verification signature / 最近一次提交的钱包所有权验证签名 */
+    private String ownershipVerificationSignature;
+
+    /** Latest wallet ownership signature submitted time in UTC / 最近一次钱包所有权签名提交时间（UTC） */
+    private OffsetDateTime ownershipSignatureSubmittedAt;
+
+    /** Wallet ownership verified time in UTC / 钱包地址所有权验证完成时间（UTC） */
+    private OffsetDateTime ownershipVerifiedAt;
 
     /** Record created time in UTC / 记录创建时间（UTC） */
     private OffsetDateTime createdAt;

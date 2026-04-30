@@ -38,6 +38,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.security.SecureRandom;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +52,16 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
     private static final Logger log = LoggerFactory.getLogger(InvoiceServiceImpl.class);
     private static final String DEFAULT_CHAIN = "SOLANA";
     private static final String DEFAULT_CURRENCY = "USDC";
+    private static final char[] BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz".toCharArray();
+    private static final int[] BASE58_INDEXES = new int[128];
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    static {
+        java.util.Arrays.fill(BASE58_INDEXES, -1);
+        for (int i = 0; i < BASE58_ALPHABET.length; i++) {
+            BASE58_INDEXES[BASE58_ALPHABET[i]] = i;
+        }
+    }
 
     private final InvoiceMapper invoiceMapper;
     private final InvoicePaymentRequestMapper invoicePaymentRequestMapper;
@@ -72,8 +83,8 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
         invoice.setInvoiceNo(generateInvoiceNo());
         invoice.setCustomerName(request.customerName());
         invoice.setAmount(request.amount());
-        invoice.setCurrency(normalizeOrDefault(request.currency(), DEFAULT_CURRENCY));
-        invoice.setChain(normalizeOrDefault(request.chain(), DEFAULT_CHAIN));
+        invoice.setCurrency(DEFAULT_CURRENCY);
+        invoice.setChain(resolveInvoiceChain(paymentConfig));
         invoice.setDescription(request.description());
         invoice.setStatus(InvoiceStatusEnum.DRAFT);
         invoice.setExpireAt(request.expireAt());
@@ -101,6 +112,7 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
             invoicePaymentRequestMapper.insert(paymentRequest);
         } else {
             paymentRequest.setRecipientAddress(paymentConfig.getWalletAddress());
+            paymentRequest.setReferenceKey(generateReferenceKey());
             paymentRequest.setMintAddress(paymentConfig.getMintAddress());
             paymentRequest.setExpectedAmount(invoice.getAmount());
             paymentRequest.setLabel("StableFlow Invoice");
@@ -110,9 +122,22 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
             invoicePaymentRequestMapper.updateById(paymentRequest);
         }
 
-        invoice.setStatus(InvoiceStatusEnum.PENDING);
+        applyStatusTransition(invoice, InvoiceStatusEnum.PENDING);
         invoiceMapper.updateById(invoice);
         return toDetailResponse(invoice, paymentRequest);
+    }
+
+    @Transactional
+    @Override
+    public InvoiceDetailVo cancelInvoice(Long invoiceId) {
+        Invoice invoice = getOwnedInvoice(invoiceId);
+        if (invoice.getStatus() != InvoiceStatusEnum.DRAFT && invoice.getStatus() != InvoiceStatusEnum.PENDING) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "Only DRAFT or PENDING invoices can be cancelled");
+        }
+
+        applyStatusTransition(invoice, InvoiceStatusEnum.CANCELLED);
+        invoiceMapper.updateById(invoice);
+        return toDetailResponse(invoice, findPaymentRequest(invoiceId));
     }
 
     @Transactional
@@ -124,8 +149,6 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
 
         invoice.setCustomerName(request.customerName());
         invoice.setAmount(request.amount());
-        invoice.setCurrency(normalizeOrDefault(request.currency(), DEFAULT_CURRENCY));
-        invoice.setChain(normalizeOrDefault(request.chain(), DEFAULT_CHAIN));
         invoice.setDescription(request.description());
         invoice.setExpireAt(request.expireAt());
 
@@ -238,7 +261,7 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
             invoice.getExpireAt(),
             invoice.getPaidAt(),
             invoice.getCreatedAt(),
-            invoice.getStatus() == InvoiceStatusEnum.DRAFT || paymentRequest == null ? null : toPaymentInfoResponse(paymentRequest)
+            hidesPaymentInfo(invoice.getStatus()) || paymentRequest == null ? null : toPaymentInfoResponse(paymentRequest)
         );
     }
 
@@ -300,7 +323,9 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
     }
 
     private String generateReferenceKey() {
-        return "ref_" + UUID.randomUUID().toString().replace("-", "");
+        byte[] referenceBytes = new byte[32];
+        SECURE_RANDOM.nextBytes(referenceBytes);
+        return encodeBase58(referenceBytes);
     }
 
     private String generateInvoiceNo() {
@@ -311,6 +336,61 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
 
     private String normalizeOrDefault(String value, String defaultValue) {
         return value == null || value.isBlank() ? defaultValue : value.toUpperCase(Locale.ROOT);
+    }
+
+    private String resolveInvoiceChain(MerchantPaymentConfig paymentConfig) {
+        return normalizeOrDefault(paymentConfig.getChain(), DEFAULT_CHAIN);
+    }
+
+    private String encodeBase58(byte[] input) {
+        if (input.length == 0) {
+            return "";
+        }
+
+        int zeros = 0;
+        while (zeros < input.length && input[zeros] == 0) {
+            zeros++;
+        }
+
+        byte[] encoded = new byte[input.length * 2];
+        int outputStart = encoded.length;
+        byte[] copy = java.util.Arrays.copyOf(input, input.length);
+
+        for (int inputStart = zeros; inputStart < copy.length; ) {
+            int remainder = divmod58(copy, inputStart);
+            encoded[--outputStart] = (byte) BASE58_ALPHABET[remainder];
+            if (copy[inputStart] == 0) {
+                inputStart++;
+            }
+        }
+
+        while (outputStart < encoded.length && encoded[outputStart] == BASE58_ALPHABET[0]) {
+            outputStart++;
+        }
+        while (--zeros >= 0) {
+            encoded[--outputStart] = (byte) BASE58_ALPHABET[0];
+        }
+        return new String(encoded, outputStart, encoded.length - outputStart, StandardCharsets.US_ASCII);
+    }
+
+    private int divmod58(byte[] number, int startAt) {
+        int remainder = 0;
+        for (int i = startAt; i < number.length; i++) {
+            int digit = number[i] & 0xFF;
+            int temp = remainder * 256 + digit;
+            number[i] = (byte) (temp / 58);
+            remainder = temp % 58;
+        }
+        return remainder;
+    }
+
+    private void applyStatusTransition(Invoice invoice, InvoiceStatusEnum targetStatus) {
+        try {
+            InvoiceStatusEnum.ensureCanTransition(invoice.getStatus(), targetStatus);
+        } catch (IllegalStateException ex) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, ex.getMessage());
+        }
+        invoice.setStatus(targetStatus);
     }
 
     private void validateEditableInvoice(Invoice invoice) {
@@ -351,8 +431,8 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
         if (invoice == null) {
             throw new BusinessException(ErrorCode.INVOICE_NOT_FOUND);
         }
-        if (invoice.getStatus() == InvoiceStatusEnum.DRAFT) {
-            throw new BusinessException(ErrorCode.INVOICE_NOT_FOUND, "Public payment page is not available for draft invoices");
+        if (hidesPaymentInfo(invoice.getStatus())) {
+            throw new BusinessException(ErrorCode.INVOICE_NOT_FOUND, "Public payment page is not available for inactive invoices");
         }
 
         // 2. 获取支付请求快照
@@ -378,9 +458,16 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
     }
 
     private void ensureInvoiceActivated(Invoice invoice) {
-        if (invoice.getStatus() == InvoiceStatusEnum.DRAFT) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "Draft invoices do not expose payment info before activation");
+        if (hidesPaymentInfo(invoice.getStatus())) {
+            throw new BusinessException(
+                ErrorCode.INVALID_REQUEST,
+                "Inactive invoices do not expose payment info before activation or after cancellation"
+            );
         }
+    }
+
+    private boolean hidesPaymentInfo(InvoiceStatusEnum status) {
+        return status == InvoiceStatusEnum.DRAFT || status == InvoiceStatusEnum.CANCELLED;
     }
 
     @Transactional
@@ -400,6 +487,11 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceMapper, Invoice> impl
 
         int expiredCount = 0;
         for (Invoice invoice : expiredCandidates) {
+            try {
+                InvoiceStatusEnum.ensureCanTransition(invoice.getStatus(), InvoiceStatusEnum.EXPIRED);
+            } catch (IllegalStateException ex) {
+                throw new BusinessException(ErrorCode.INVALID_REQUEST, ex.getMessage());
+            }
             // 逐条按当前状态做条件更新，避免任务与并发支付处理直接互相覆盖。
             int updatedRows = invoiceMapper.update(
                 null,

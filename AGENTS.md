@@ -96,6 +96,12 @@ For a fresh thread, use this workflow:
 - For CRUD-oriented MyBatis-Plus services, prefer `XxxService extends IService<Entity>` and `XxxServiceImpl extends ServiceImpl<Mapper, Entity>`.
 - Do not force `IService` onto orchestration-style services that are not centered on a single entity aggregate.
 
+## Data Access
+
+- Prefer MyBatis-Plus CRUD methods and business code composition for simple persistence and query logic.
+- Avoid writing XML or handwritten SQL by default; only introduce custom SQL when it materially simplifies the implementation or provides clear query/performance benefits.
+- When PostgreSQL-specific types such as `jsonb` need special handling, prefer type handlers or business-layer adapters before adding mapper SQL.
+
 ## Constructor Conventions
 
 - For Spring-managed dependency injection classes such as `@RestController`, `@Service`, `@Component`, jobs, and security components, prefer Lombok `@RequiredArgsConstructor`.

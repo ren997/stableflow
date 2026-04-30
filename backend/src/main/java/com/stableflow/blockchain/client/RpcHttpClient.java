@@ -64,7 +64,7 @@ public class RpcHttpClient {
         requestFactory.setReadTimeout(readTimeout);
 
         return RestClient.builder()
-            .baseUrl(solanaProperties.rpcUrl())
+            .baseUrl(solanaProperties.resolvedRpcUrl())
             .defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
             .requestFactory(requestFactory)
             .build();

@@ -71,8 +71,6 @@ class InvoiceServiceUpdateTest {
             200L,
             "Bob",
             new BigDecimal("120.50"),
-            "usdc",
-            "solana",
             "Updated draft",
             utc("2026-03-23T10:00:00Z")
         );
@@ -106,8 +104,6 @@ class InvoiceServiceUpdateTest {
             201L,
             "Charlie",
             new BigDecimal("99.00"),
-            "USDC",
-            "SOLANA",
             "Updated pending",
             utc("2026-03-24T10:00:00Z")
         );
@@ -128,8 +124,6 @@ class InvoiceServiceUpdateTest {
             203L,
             "Alice",
             new BigDecimal("99.00"),
-            "USDC",
-            "SOLANA",
             "Updated paid",
             utc("2026-03-24T10:00:00Z")
         );

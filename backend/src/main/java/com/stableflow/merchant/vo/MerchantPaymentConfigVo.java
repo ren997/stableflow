@@ -1,5 +1,6 @@
 package com.stableflow.merchant.vo;
 
+import com.stableflow.merchant.enums.MerchantWalletOwnershipStatusEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 
@@ -17,6 +18,14 @@ public record MerchantPaymentConfigVo(
     String chain,
     @Schema(description = "Whether config is active / 是否启用")
     Boolean activeFlag,
+    @Schema(description = MerchantWalletOwnershipStatusEnum.DESC, implementation = MerchantWalletOwnershipStatusEnum.class)
+    MerchantWalletOwnershipStatusEnum ownershipVerificationStatus,
+    @Schema(description = "Wallet ownership challenge expiry time in UTC / 钱包所有权挑战过期时间（UTC）")
+    OffsetDateTime ownershipChallengeExpiresAt,
+    @Schema(description = "Wallet ownership signature submitted time in UTC / 钱包所有权签名提交时间（UTC）")
+    OffsetDateTime ownershipSignatureSubmittedAt,
+    @Schema(description = "Wallet ownership verified time in UTC / 钱包所有权验证完成时间（UTC）")
+    OffsetDateTime ownershipVerifiedAt,
     @Schema(description = "Created time in UTC / 创建时间（UTC）")
     OffsetDateTime createdAt,
     @Schema(description = "Updated time in UTC / 更新时间（UTC）")

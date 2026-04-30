@@ -33,8 +33,10 @@ public class ReconciliationServiceImpl implements ReconciliationService {
             } catch (RuntimeException ex) {
                 // 单笔核销失败只打日志，避免整批任务被一条脏数据阻断。
                 log.error(
-                    "Failed to reconcile paymentTransactionId={}, txHash={}",
+                    "Failed to reconcile paymentTransactionId={}, invoiceId={}, reference={}, txHash={}",
                     paymentTransaction.getId(),
+                    paymentTransaction.getInvoiceId(),
+                    paymentTransaction.getReferenceKey(),
                     paymentTransaction.getTxHash(),
                     ex
                 );
@@ -61,9 +63,10 @@ public class ReconciliationServiceImpl implements ReconciliationService {
                 }
             } catch (RuntimeException ex) {
                 log.error(
-                    "Failed to manually reconcile invoiceId={}, paymentTransactionId={}, txHash={}",
+                    "Failed to manually reconcile invoiceId={}, paymentTransactionId={}, reference={}, txHash={}",
                     invoiceId,
                     paymentTransaction.getId(),
+                    paymentTransaction.getReferenceKey(),
                     paymentTransaction.getTxHash(),
                     ex
                 );

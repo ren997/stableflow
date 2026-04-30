@@ -9,13 +9,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stableflow.invoice.dto.ActivateInvoiceRequestDto;
 import com.stableflow.invoice.dto.InvoiceIdQueryDto;
 import com.stableflow.invoice.dto.InvoiceListQueryDto;
+import com.stableflow.invoice.dto.ManualSubmitPaymentRequestDto;
 import com.stableflow.invoice.dto.ReconcileInvoiceRequestDto;
 import com.stableflow.invoice.dto.UpdateInvoiceRequestDto;
 import com.stableflow.invoice.enums.ExceptionTagEnum;
 import com.stableflow.invoice.enums.InvoiceStatusEnum;
 import com.stableflow.invoice.service.InvoiceService;
+import com.stableflow.invoice.service.ManualInvoicePaymentService;
 import com.stableflow.invoice.vo.InvoiceDetailVo;
 import com.stableflow.invoice.vo.InvoiceListItemVo;
+import com.stableflow.invoice.vo.ManualSubmitPaymentVo;
 import com.stableflow.invoice.vo.PaymentInfoVo;
 import com.stableflow.invoice.vo.PaymentStatusVo;
 import com.stableflow.reconciliation.service.PaymentProofService;
@@ -46,6 +49,9 @@ class InvoiceControllerTest {
     private InvoiceService invoiceService;
 
     @Mock
+    private ManualInvoicePaymentService manualInvoicePaymentService;
+
+    @Mock
     private PaymentProofService paymentProofService;
 
     @Mock
@@ -59,7 +65,9 @@ class InvoiceControllerTest {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new InvoiceController(invoiceService, paymentProofService, reconciliationService))
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                new InvoiceController(invoiceService, manualInvoicePaymentService, paymentProofService, reconciliationService)
+            )
             .setControllerAdvice(new GlobalExceptionHandler())
             .setValidator(validator)
             .build();
@@ -125,10 +133,8 @@ class InvoiceControllerTest {
                                 1L,
                                 "Alice",
                                 new BigDecimal("99.00"),
-                                "USDC",
-                                "SOLANA",
                                 "Monthly fee",
-                                OffsetDateTime.parse("2026-03-21T10:00:00Z")
+                                OffsetDateTime.now().plusDays(1)
                             )
                         )
                     )
@@ -148,8 +154,6 @@ class InvoiceControllerTest {
                             new com.stableflow.invoice.dto.CreateInvoiceRequestDto(
                                 "Alice",
                                 new BigDecimal("99.00"),
-                                "USDC",
-                                "SOLANA",
                                 "x".repeat(513),
                                 OffsetDateTime.parse("2026-03-21T10:00:00Z")
                             )
@@ -170,8 +174,6 @@ class InvoiceControllerTest {
                         {
                           "customerName": "Alice",
                           "amount": "not-a-number",
-                          "currency": "USDC",
-                          "chain": "SOLANA",
                           "description": "Monthly fee",
                           "expireAt": "2026-03-21T10:00:00Z"
                         }
@@ -195,6 +197,21 @@ class InvoiceControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.id").value(1))
             .andExpect(jsonPath("$.data.invoiceNo").value("INV-001"));
+    }
+
+    @Test
+    void shouldCancelInvoiceViaPost() throws Exception {
+        when(invoiceService.cancelInvoice(1L)).thenReturn(cancelledInvoiceDetailVo());
+
+        mockMvc.perform(
+                post("/api/invoices/cancel")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new InvoiceIdQueryDto(1L)))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(1))
+            .andExpect(jsonPath("$.data.status").value("CANCELLED"))
+            .andExpect(jsonPath("$.data.paymentInfo").doesNotExist());
     }
 
     @Test
@@ -236,6 +253,24 @@ class InvoiceControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.txHash").value("tx-001"))
             .andExpect(jsonPath("$.data.exceptionTags[0]").value("LATE_PAYMENT"));
+    }
+
+    @Test
+    void shouldSubmitManualPaymentViaPost() throws Exception {
+        when(manualInvoicePaymentService.submitPayment(new ManualSubmitPaymentRequestDto(1L, "tx-manual"))).thenReturn(
+            manualSubmitPaymentVo()
+        );
+
+        mockMvc.perform(
+                post("/api/invoices/payment/manual-submit")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new ManualSubmitPaymentRequestDto(1L, "tx-manual")))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.invoiceId").value(1L))
+            .andExpect(jsonPath("$.data.txHash").value("tx-manual"))
+            .andExpect(jsonPath("$.data.verificationResult").value("PAID"))
+            .andExpect(jsonPath("$.data.paymentStatus.status").value("PAID"));
     }
 
     @Test
@@ -293,6 +328,24 @@ class InvoiceControllerTest {
         );
     }
 
+    private InvoiceDetailVo cancelledInvoiceDetailVo() {
+        return new InvoiceDetailVo(
+            1L,
+            "pub-001",
+            "INV-001",
+            "Alice",
+            new BigDecimal("99.00"),
+            "USDC",
+            "SOLANA",
+            "Monthly fee",
+            InvoiceStatusEnum.CANCELLED,
+            OffsetDateTime.parse("2026-03-21T10:00:00Z"),
+            null,
+            OffsetDateTime.parse("2026-03-20T10:00:00Z"),
+            null
+        );
+    }
+
     private PaymentInfoVo paymentInfoVo() {
         return new PaymentInfoVo(
             "wallet-1",
@@ -339,6 +392,20 @@ class InvoiceControllerTest {
             com.stableflow.reconciliation.enums.ReconciliationStatusEnum.SUCCESS,
             "Invoice marked as paid.",
             OffsetDateTime.parse("2026-03-20T11:05:00Z")
+        );
+    }
+
+    private ManualSubmitPaymentVo manualSubmitPaymentVo() {
+        return new ManualSubmitPaymentVo(
+            1L,
+            10L,
+            "tx-manual",
+            null,
+            PaymentVerificationResultEnum.PAID,
+            PaymentTransactionStatusEnum.PAID,
+            1,
+            paymentStatusVo(),
+            "Transaction amount matches the invoice expected amount. The invoice was matched through manual tx hash submission because the transaction carries no on-chain reference."
         );
     }
 }

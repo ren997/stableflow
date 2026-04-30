@@ -1,4 +1,4 @@
-import { request } from './http';
+import { publicRequest } from './http';
 
 export interface LoginRequest {
   email: string;
@@ -20,14 +20,14 @@ export interface LoginResponse {
 }
 
 export function login(requestBody: LoginRequest): Promise<LoginResponse> {
-  return request<LoginResponse>('/auth/login', {
+  return publicRequest<LoginResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify(requestBody)
   });
 }
 
 export function register(requestBody: RegisterRequest): Promise<LoginResponse> {
-  return request<LoginResponse>('/auth/register', {
+  return publicRequest<LoginResponse>('/auth/register', {
     method: 'POST',
     body: JSON.stringify(requestBody)
   });

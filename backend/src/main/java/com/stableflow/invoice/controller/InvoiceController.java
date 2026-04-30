@@ -6,11 +6,14 @@ import com.stableflow.invoice.dto.ActivateInvoiceRequestDto;
 import com.stableflow.invoice.dto.CreateInvoiceRequestDto;
 import com.stableflow.invoice.dto.InvoiceIdQueryDto;
 import com.stableflow.invoice.dto.InvoiceListQueryDto;
+import com.stableflow.invoice.dto.ManualSubmitPaymentRequestDto;
 import com.stableflow.invoice.dto.ReconcileInvoiceRequestDto;
 import com.stableflow.invoice.dto.UpdateInvoiceRequestDto;
 import com.stableflow.invoice.service.InvoiceService;
+import com.stableflow.invoice.service.ManualInvoicePaymentService;
 import com.stableflow.invoice.vo.InvoiceDetailVo;
 import com.stableflow.invoice.vo.InvoiceListItemVo;
+import com.stableflow.invoice.vo.ManualSubmitPaymentVo;
 import com.stableflow.invoice.vo.PaymentInfoVo;
 import com.stableflow.invoice.vo.PaymentStatusVo;
 import com.stableflow.reconciliation.service.PaymentProofService;
@@ -33,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class InvoiceController {
 
     private final InvoiceService invoiceService;
+    private final ManualInvoicePaymentService manualInvoicePaymentService;
     private final PaymentProofService paymentProofService;
     private final ReconciliationService reconciliationService;
 
@@ -46,6 +50,12 @@ public class InvoiceController {
     @Operation(summary = "Activate invoice / 激活账单")
     public ApiResponse<InvoiceDetailVo> activateInvoice(@Valid @RequestBody ActivateInvoiceRequestDto request) {
         return ApiResponse.success(invoiceService.activateInvoice(request));
+    }
+
+    @PostMapping("/cancel")
+    @Operation(summary = "Cancel invoice / 取消账单")
+    public ApiResponse<InvoiceDetailVo> cancelInvoice(@Valid @RequestBody InvoiceIdQueryDto request) {
+        return ApiResponse.success(invoiceService.cancelInvoice(request.id()));
     }
 
     @PostMapping("/update")
@@ -89,6 +99,12 @@ public class InvoiceController {
     @Operation(summary = "Query invoice payment proof / 查询账单支付凭证")
     public ApiResponse<PaymentProofVo> getPaymentProof(@Valid @RequestBody InvoiceIdQueryDto request) {
         return ApiResponse.success(paymentProofService.getLatestProof(request.id()));
+    }
+
+    @PostMapping("/payment/manual-submit")
+    @Operation(summary = "Submit payment tx hash manually / 手动提交支付交易哈希")
+    public ApiResponse<ManualSubmitPaymentVo> submitManualPayment(@Valid @RequestBody ManualSubmitPaymentRequestDto request) {
+        return ApiResponse.success(manualInvoicePaymentService.submitPayment(request));
     }
 
     @PostMapping("/reconcile")

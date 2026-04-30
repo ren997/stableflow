@@ -11,6 +11,13 @@ Stablecoin payment workflow infrastructure, first built on Solana.
 ## Overview
 StableFlow is a workflow-driven stablecoin billing, payment, and reconciliation system for global merchants.
 
+## Demo
+
+- Live demo: http://110.40.155.140/
+- Demo operation guide: [docs/demo-operation-guide.md](docs/demo-operation-guide.md)
+- Deployment guide: [docs/deployment.md](docs/deployment.md)
+- Public payment page example: http://110.40.155.140/pay/pub_d4b4579f5e304459b9273cca0320ef0f
+
 ## Commit message linting
 
 This repository uses `commitlint` with the Conventional Commits preset.

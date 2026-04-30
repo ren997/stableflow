@@ -1,9 +1,12 @@
 import { useEffect } from 'react';
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { ExceptionInvoicesPage } from '../pages/exceptions/ExceptionInvoicesPage';
 import { clearSession, getAccessToken } from '../services/session';
 import { DashboardPage } from '../pages/dashboard/DashboardPage';
+import { InvoicesPage } from '../pages/invoices/InvoicesPage';
 import { LoginPage } from '../pages/login/LoginPage';
 import { PaymentConfigPage } from '../pages/merchant/PaymentConfigPage';
+import { PublicPaymentPage } from '../pages/payment/PublicPaymentPage';
 import { RegisterPage } from '../pages/register/RegisterPage';
 
 function RequireAuth() {
@@ -11,14 +14,6 @@ function RequireAuth() {
 
   if (!getAccessToken()) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  }
-
-  return <Outlet />;
-}
-
-function PublicOnlyRoute() {
-  if (getAccessToken()) {
-    return <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;
@@ -42,15 +37,17 @@ function LogoutRedirect() {
 export function AppRouter() {
   return (
     <Routes>
-      <Route element={<PublicOnlyRoute />}>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-      </Route>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route element={<RequireAuth />}>
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/invoices/exceptions" element={<ExceptionInvoicesPage />} />
+        <Route path="/invoices" element={<InvoicesPage />} />
+        <Route path="/invoices/:invoiceId" element={<InvoicesPage />} />
         <Route path="/settings/payment-config" element={<PaymentConfigPage />} />
         <Route path="/logout" element={<LogoutRedirect />} />
       </Route>
+      <Route path="/pay/:publicId" element={<PublicPaymentPage />} />
       <Route path="/" element={<RootRedirect />} />
       <Route path="*" element={<RootRedirect />} />
     </Routes>

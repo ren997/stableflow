@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Button, Card, Col, Form, Input, Row, Space, Typography, message } from 'antd';
 import { Link, useNavigate } from 'react-router-dom';
 import { register, type RegisterRequest } from '../../services/auth';
-import { getAccessToken, setAuthenticatedMerchantSession } from '../../services/session';
+import { setAuthenticatedMerchantSession } from '../../services/session';
 
 const registerBullets = ['Create your merchant workspace', 'Get instant dashboard access', 'Start billing before chain traffic lands'];
 
@@ -21,12 +20,6 @@ export function RegisterPage() {
       navigate('/dashboard', { replace: true });
     }
   });
-
-  useEffect(() => {
-    if (getAccessToken()) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [navigate]);
 
   return (
     <div className="auth-shell">

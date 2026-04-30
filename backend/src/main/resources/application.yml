@@ -43,13 +43,17 @@ stableflow:
   payment:
     order-association-mode: FIXED_ADDRESS_REFERENCE
     public-base-url: ${PUBLIC_BASE_URL:http://localhost:5173}
+  merchant:
+    ownership:
+      challenge-ttl: ${MERCHANT_OWNERSHIP_CHALLENGE_TTL:10m}
   security:
     jwt-secret: ${JWT_SECRET:change-me-in-env}
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
     token-ttl: ${JWT_TOKEN_TTL:12h}
   solana:
-    rpc-url: ${SOLANA_RPC_URL:https://api.devnet.solana.com}
-    usdc-mint-address: ${SOLANA_USDC_MINT:replace-me}
+    network: ${SOLANA_NETWORK:DEVNET}
+    rpc-url: ${SOLANA_RPC_URL:}
+    usdc-mint-address: ${SOLANA_USDC_MINT:}
     connect-timeout: ${SOLANA_CONNECT_TIMEOUT:3s}
     read-timeout: ${SOLANA_READ_TIMEOUT:10s}
     retry-max-attempts: ${SOLANA_RETRY_MAX_ATTEMPTS:3}
@@ -81,3 +85,13 @@ stableflow:
       batch-size: ${RECONCILIATION_JOB_BATCH_SIZE:50}
       fixed-delay-ms: ${RECONCILIATION_JOB_FIXED_DELAY_MS:30000}
       initial-delay-ms: ${RECONCILIATION_JOB_INITIAL_DELAY_MS:20000}
+  outbox:
+    job:
+      enabled: ${OUTBOX_JOB_ENABLED:true}
+      batch-size: ${OUTBOX_JOB_BATCH_SIZE:50}
+      fixed-delay-ms: ${OUTBOX_JOB_FIXED_DELAY_MS:30000}
+      initial-delay-ms: ${OUTBOX_JOB_INITIAL_DELAY_MS:25000}
+      lock-enabled: ${OUTBOX_JOB_LOCK_ENABLED:true}
+      lock-key: ${OUTBOX_JOB_LOCK_KEY:stableflow:job:outbox-dispatch:lock}
+      lock-ttl: ${OUTBOX_JOB_LOCK_TTL:5m}
+      retry-delay: ${OUTBOX_JOB_RETRY_DELAY:1m}
