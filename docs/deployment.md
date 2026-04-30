@@ -80,32 +80,18 @@ Browser
 - `docker-compose.yml`
 - `.env`
 
-也就是说，推荐直接把当前仓库整体放到 `/opt/stableflow`。
+也就是说，推荐让 `/opt/stableflow` 本身就是 Git 工作目录，后续更新时直接在服务器执行 `git pull`。
 
-### 4.2 上传代码到服务器
+### 4.2 从 Git 拉取代码到服务器
 
-建议把项目放到：
-
-```bash
-/opt/stableflow
-```
-
-上传代码有两种方式，任选一种：
-
-#### 方式 A：服务器直接拉 Git
+首次部署时，把仓库克隆到固定目录：
 
 ```bash
 git clone <your-repo-url> /opt/stableflow
 cd /opt/stableflow
 ```
 
-#### 方式 B：本地代码直接上传到服务器
-
-如果服务器访问 GitHub 不稳定，直接把本地当前代码上传到 `/opt/stableflow` 即可。
-
-这也是当前已经走通过的方式，更适合 Demo 环境。
-
-上传完成后进入项目目录：
+如果目录已经存在，并且已经是 Git 工作目录，直接进入目录即可：
 
 ```bash
 cd /opt/stableflow
@@ -203,7 +189,7 @@ docker compose up -d --build
 
 ```bash
 mkdir -p /opt/stableflow
-# 把项目代码上传到 /opt/stableflow
+git clone <your-repo-url> /opt/stableflow
 cd /opt/stableflow
 cp .env.example .env
 nano .env
@@ -250,20 +236,9 @@ docker compose logs -f frontend
 
 ## 7. 后续更新代码怎么做
 
-### 方式 A：服务器目录本身就是 Git 工作目录
-
 ```bash
 cd /opt/stableflow
 git pull
-./deploy.sh
-```
-
-### 方式 B：服务器使用上传后的代码目录
-
-把本地改动过的文件重新上传到服务器后执行：
-
-```bash
-cd /opt/stableflow
 ./deploy.sh
 ```
 
@@ -273,7 +248,7 @@ cd /opt/stableflow
 ./deploy.sh
 ```
 
-对于当前项目的 Demo 场景，方式 B 更直接，也更稳。
+推荐更新节奏是：本地提交并推送到远端仓库，服务器执行 `git pull` 拉取最新代码，然后执行 `./deploy.sh` 重建并启动容器。
 
 ---
 
