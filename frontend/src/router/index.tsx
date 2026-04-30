@@ -19,14 +19,6 @@ function RequireAuth() {
   return <Outlet />;
 }
 
-function PublicOnlyRoute() {
-  if (getAccessToken()) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return <Outlet />;
-}
-
 function RootRedirect() {
   return <Navigate to={getAccessToken() ? '/dashboard' : '/login'} replace />;
 }
@@ -45,10 +37,8 @@ function LogoutRedirect() {
 export function AppRouter() {
   return (
     <Routes>
-      <Route element={<PublicOnlyRoute />}>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-      </Route>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route element={<RequireAuth />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/invoices/exceptions" element={<ExceptionInvoicesPage />} />

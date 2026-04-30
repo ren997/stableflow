@@ -21,6 +21,7 @@ import com.stableflow.system.config.MerchantOwnershipProperties;
 import com.stableflow.system.config.SolanaProperties;
 import com.stableflow.system.enums.SolanaNetworkEnum;
 import com.stableflow.system.exception.BusinessException;
+import com.stableflow.system.exception.ErrorCode;
 import com.stableflow.system.security.CurrentMerchantProvider;
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -105,6 +106,24 @@ class MerchantPaymentConfigServiceImplTest {
         assertEquals("SOLANA", result.chain());
         assertEquals(MerchantWalletOwnershipStatusEnum.UNVERIFIED, result.ownershipVerificationStatus());
         verify(paymentConfigMapper).insert(any(MerchantPaymentConfig.class));
+    }
+
+    @Test
+    void shouldRejectWalletAddressOwnedByAnotherMerchant() {
+        MerchantPaymentConfig occupiedConfig = baseConfig();
+        occupiedConfig.setMerchantId(11L);
+
+        when(currentMerchantProvider.requireCurrentMerchantId()).thenReturn(10L);
+        when(paymentConfigMapper.selectOne(any())).thenReturn(null, occupiedConfig);
+
+        BusinessException exception = assertThrows(
+            BusinessException.class,
+            () -> merchantPaymentConfigService.saveOrUpdate(new MerchantPaymentConfigRequestDto("wallet-1"))
+        );
+
+        assertEquals(ErrorCode.WALLET_ADDRESS_ALREADY_CONFIGURED, exception.getErrorCode());
+        verify(paymentConfigMapper, never()).insert(any(MerchantPaymentConfig.class));
+        verify(paymentConfigMapper, never()).updateById(any(MerchantPaymentConfig.class));
     }
 
     @Test

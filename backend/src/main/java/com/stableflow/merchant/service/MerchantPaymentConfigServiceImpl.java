@@ -50,6 +50,7 @@ public class MerchantPaymentConfigServiceImpl
             config = new MerchantPaymentConfig();
             config.setMerchantId(merchantId);
         }
+        validateWalletAddressAvailable(request.walletAddress(), merchantId);
         boolean ownershipTargetChanged = isOwnershipTargetChanged(config, request);
         config.setWalletAddress(request.walletAddress());
         config.setMintAddress(solanaProperties.resolvedUsdcMintAddress());
@@ -186,6 +187,15 @@ public class MerchantPaymentConfigServiceImpl
         return config.getId() == null
             || !Objects.equals(config.getWalletAddress(), request.walletAddress())
             || !Objects.equals(config.getChain(), DEFAULT_CHAIN);
+    }
+
+    private void validateWalletAddressAvailable(String walletAddress, Long merchantId) {
+        MerchantPaymentConfig occupiedConfig = paymentConfigMapper.selectOne(
+            new LambdaQueryWrapper<MerchantPaymentConfig>().eq(MerchantPaymentConfig::getWalletAddress, walletAddress)
+        );
+        if (occupiedConfig != null && !Objects.equals(occupiedConfig.getMerchantId(), merchantId)) {
+            throw new BusinessException(ErrorCode.WALLET_ADDRESS_ALREADY_CONFIGURED);
+        }
     }
 
     private void resetOwnershipState(MerchantPaymentConfig config) {

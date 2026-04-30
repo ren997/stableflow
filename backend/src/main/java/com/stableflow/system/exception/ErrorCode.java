@@ -12,6 +12,7 @@ public enum ErrorCode {
     INVALID_REQUEST(40002, "Invalid request"),
     EMAIL_ALREADY_REGISTERED(40003, "Email already registered"),
     WALLET_OWNERSHIP_CHALLENGE_EXPIRED(40004, "Wallet ownership challenge expired"),
+    WALLET_ADDRESS_ALREADY_CONFIGURED(40005, "Wallet address already configured by another merchant"),
     BLOCKCHAIN_RPC_TIMEOUT(50010, "Blockchain RPC timeout"),
     BLOCKCHAIN_RPC_HTTP_ERROR(50011, "Blockchain RPC HTTP error"),
     BLOCKCHAIN_RPC_ERROR(50012, "Blockchain RPC error"),
